@@ -1,4 +1,6 @@
 node_modules/
 .env
-uploads/
+/uploads/*
+!/uploads/.gitkeep
+*.pdf
 debug_pdf.js

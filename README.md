@@ -29,9 +29,9 @@ It uses AI-powered semantic search to fetch relevant information from uploaded P
 
 
 
-enterprise-sop-agent/
-├─ frontend/ # Frontend UI will go here
-├─ backend/ # Backend code will go here
+enterprise-sop-agent
+├─ frontend # Frontend UI will go here
+├─ backend # Backend code will go here
 └─ README.md
 
 

@@ -41,7 +41,7 @@ const uploadPDF = async (req, res) => {
         }
 
         // Clean up: Delete the local file after processing to save space
-        // fs.unlinkSync(filePath); 
+        fs.unlinkSync(filePath);
 
         res.status(200).json({
             success: true,
