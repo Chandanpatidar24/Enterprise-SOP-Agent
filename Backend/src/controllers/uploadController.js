@@ -13,31 +13,36 @@ const uploadPDF = async (req, res) => {
         console.log(`Processing file: ${req.file.originalname}`);
 
         // 1. Parse PDF
-        const { text } = await parsePDF(filePath);
-        if (!text) {
+        const { pages } = await parsePDF(filePath);
+        if (!pages || pages.length === 0) {
             return res.status(400).json({ success: false, message: 'Could not extract text from PDF' });
         }
 
-        // 2. Chunk Text
-        const chunks = chunkText(text);
-        console.log(`Generated ${chunks.length} chunks.`);
-
-        // 3. Generate Embeddings & Save to DB
+        // 2. Chunk Text and Save to DB (Processing by Page)
         const savedChunks = [];
-        for (let i = 0; i < chunks.length; i++) {
-            const chunkContent = chunks[i];
+        let totalChunkCount = 0;
 
-            // Generate Vector
-            const vector = await generateEmbedding(chunkContent);
+        for (let p = 0; p < pages.length; p++) {
+            const pageText = pages[p];
+            const pageNumber = p + 1;
+            const chunks = chunkText(pageText);
 
-            // Create DB Entry
-            const newChunk = await DocumentChunk.create({
-                sourceFile: req.file.originalname,
-                chunkIndex: i,
-                text: chunkContent,
-                vector: vector
-            });
-            savedChunks.push(newChunk);
+            for (let i = 0; i < chunks.length; i++) {
+                const chunkContent = chunks[i];
+
+                // Generate Vector
+                const vector = await generateEmbedding(chunkContent);
+
+                // Create DB Entry
+                const newChunk = await DocumentChunk.create({
+                    sourceFile: req.file.originalname,
+                    chunkIndex: totalChunkCount++,
+                    text: chunkContent,
+                    vector: vector,
+                    pageNumber: pageNumber
+                });
+                savedChunks.push(newChunk);
+            }
         }
 
         // Clean up: Delete the local file after processing to save space

@@ -15,7 +15,14 @@ app.get('/', (req, res) => {
 // Import the use Upload Router
 
 const uploadRoutes = require('./routes/uploadRoutes');
-app.use('/api', uploadRoutes);
+const searchRoutes = require('./routes/searchRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+
+app.use('/api', uploadRoutes);     // Handles /api/upload
+app.use('/api/search', searchRoutes); // Handles /api/search
+app.use('/api/admin', adminRoutes);   // Handles /api/admin/documents
+app.use('/api/chat', chatRoutes);     // Handles /api/chat
 
 // Global Error Handler
 app.use((err, req, res, next) => {

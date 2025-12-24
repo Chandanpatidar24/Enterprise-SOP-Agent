@@ -2,27 +2,45 @@ const fs = require('fs');
 const pdf = require('pdf-parse');
 const { PDFDocument } = require('pdf-lib');
 
-// 1. Parse PDF to Text
+// 1. Parse PDF to Text (Enhanced for Page-by-Page extraction)
 const parsePDF = async (filePath) => {
     try {
         let dataBuffer = fs.readFileSync(filePath);
 
-        // EXTRA: Repair PDF if malformed (fixes "bad XRef entry" errors)
+        // EXTRA: Repair PDF if malformed
         try {
             const pdfDoc = await PDFDocument.load(dataBuffer);
             const repairedBuffer = await pdfDoc.save();
             dataBuffer = Buffer.from(repairedBuffer);
         } catch (repairError) {
-            console.log("Note: PDF repair not possible or not needed, proceeding with original buffer.");
+            console.log("Note: PDF repair not possible or not needed.");
         }
 
-        const data = await pdf(dataBuffer);
+        // Custom pagerender to capture text per page
+        const pages = [];
+        const options = {
+            pagerender: (pageData) => {
+                return pageData.getTextContent().then((textContent) => {
+                    let lastY, text = '';
+                    for (let item of textContent.items) {
+                        if (lastY == item.transform[5] || !lastY) {
+                            text += item.str;
+                        } else {
+                            text += '\n' + item.str;
+                        }
+                        lastY = item.transform[5];
+                    }
+                    pages.push(text);
+                    return text;
+                });
+            }
+        };
 
-        // Remove excessive newlines/spaces for cleaner embedding
-        const cleanText = data.text.replace(/\n\s*\n/g, '\n').trim();
+        await pdf(dataBuffer, options);
+
         return {
-            text: cleanText,
-            totalPages: data.numpages
+            pages: pages, // Array of strings (one per page)
+            totalPages: pages.length
         };
     } catch (error) {
         throw new Error(`Failed to parse PDF: ${error.message}`);

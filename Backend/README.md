@@ -1,72 +1,62 @@
-# OpsMind AI - Context-Aware Corporate Knowledge Brain
+# OpsMind AI - Enterprise Backend (Weeks 1-3)
 
-OpsMind AI is an intelligent Agentic RAG (Retrieval Augmented Generation) system designed for large corporations to manage and query Standard Operating Procedures (SOPs). It parses complex PDF documents, generates semantic vector embeddings, and provides accurate, source-cited answers to employee queries.
+A professional, enterprise-grade RAG (Retrieval-Augmented Generation) backend for managing and querying Standard Operating Procedures (SOPs).
 
----
+## 🚀 Features
 
-## 🚀 Project Overview
+### **Week 1: Knowledge Ingestion**
+- **PDF Repair & Parsing**: Automatic repair of malformed PDFs using `pdf-lib` and text extraction via `pdf-parse`.
+- **Intelligent Chunking**: Splits documents into manageable segments (1000 chars) with overlap for context retention.
+- **Vector Embeddings**: Uses Google Gemini (`text-embedding-004`) to generate 768-dimensional vectors.
+- **Atlas Storage**: Persistent storage of text and vectors in MongoDB Atlas.
 
-The goal of this project is to build a "Corporate Knowledge Brain" that prevents hallucinations and ensures all AI responses are grounded in official corporate documentation.
+### **Week 2: Retrieval Engine**
+- **Vector Search**: High-performance similarity search using MongoDB Atlas Vector Search ($vectorSearch).
+- **Page-Aware Storage**: Chunks are mapped to specific PDF page numbers for precise source citation.
+- **Metadata Management**: Optimized search scores and document tracking.
 
-### Core Features
-- **RAG Pipeline**: Advanced PDF ingestion, chunking, and vectorization.
-- **Vector Search**: High-performance semantic retrieval using MongoDB Atlas Vector Search.
-- **Source Citation**: Transparent AI responses with direct links to source documents.
-- **Admin Knowledge Base**: Dedicated interface for managing corporate SOPs.
+### **Week 3: Chat Agent & Admin**
+- **RAG Chat**: Context-aware AI responses using Gemini 1.5 Flash.
+- **Source Citation**: The AI explicitly cites its sources (e.g., "According to Policy.pdf, Page 4").
+- **Hallucination Control**: Strict systemic rules to prevent the AI from making up information.
+- **Admin API**: Endpoints to list all indexed documents and delete them to trigger re-indexing.
 
----
+## 🛠️ Tech Stack
+- **Runtime**: Node.js & Express
+- **Database**: MongoDB Atlas (with Vector Search)
+- **AI**: Google Generative AI (Gemini)
+- **PDF**: pdf-parse, pdf-lib
+- **Storage**: local ephemeral storage (with automatic cleanup)
 
-## 🛠️ Tech Stack (Backend)
+## 🏁 Quick Start
 
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: MongoDB Atlas (Vector Search enabled)
-- **AI Engine**: Google Gemini (Text Embeddings)
-- **File Handling**: Multer & PDF-Parse
+### 1. Environment Variables
+Create a `.env` file in the root:
+```env
+PORT=5000
+MONGODB_URI=your_mongodb_atlas_uri
+GEMINI_API_KEY=your_google_gemini_api_key
+```
 
----
+### 2. Installation
+```bash
+npm install
+```
 
-## 📈 Roadmap & Progress
+### 3. Run Development Server
+```bash
+npm run dev
+```
 
-### Week 1: Knowledge Ingestion ✅
-- [x] Backend architecture setup.
-- [x] PDF Upload service with Multer.
-- [x] Document parsing and text chunking logic.
-- [x] Integration with Google Gemini for Vector Embeddings.
-- [x] Secure storage of vectors in MongoDB Atlas.
+## 📡 API Documentation
 
-### Week 2: Retrieval Engine (Upcoming)
-- [ ] Query embedding generation.
-- [ ] MongoDB Atlas Vector Search aggregation pipeline.
-- [ ] Context window construction for LLM.
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `POST` | `/api/upload` | Upload and index a PDF file |
+| `POST` | `/api/search` | Search for relevant chunks |
+| `POST` | `/api/chat` | Chat with the AI about SOPs |
+| `GET` | `/api/admin/documents` | List all indexed SOP files |
+| `DELETE` | `/api/admin/documents/:filename` | Delete an SOP from the library |
 
----
-
-## ⚙️ Setup & Installation
-
-1. **Clone the repository**
-2. **Install dependencies**:
-   ```bash
-   cd Backend
-   npm install
-   ```
-3. **Environment Setup**:
-   Create a `.env` file in the `Backend` directory:
-   ```env
-   PORT=5000
-   MONGODB_URI=your_mongodb_atlas_uri
-   GEMINI_API_KEY=your_google_gemini_api_key
-   ```
-4. **Run the server**:
-   ```bash
-   npm run dev
-   ```
-
----
-
-## 🧪 Testing the API
-
-- **Upload PDF**: `POST /api/upload` (form-data with key `pdf`)
-- **Health Check**: `GET /`
-
----
+## 🧪 Testing
+Check the `full_testing_walkthrough.md` in the documentation folder for detailed Postman instructions.

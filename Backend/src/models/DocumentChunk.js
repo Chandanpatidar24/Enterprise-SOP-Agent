@@ -21,6 +21,13 @@ const DocumentChunkSchema = new mongoose.Schema({
         required: true,
         index: true
     },
+    pageNumber: {
+        type: Number
+    },
+    metadata: {
+        type: Object,
+        default: {}
+    },
     createdAt: {
         type: Date,
         default: Date.now
