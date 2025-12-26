@@ -5,18 +5,39 @@ const { PDFDocument } = require('pdf-lib');
 // 1. Parse PDF to Text (Enhanced for Page-by-Page extraction)
 const parsePDF = async (filePath) => {
     try {
-        let dataBuffer = fs.readFileSync(filePath);
+        const dataBuffer = fs.readFileSync(filePath);
 
-        // EXTRA: Repair PDF if malformed
-        try {
-            const pdfDoc = await PDFDocument.load(dataBuffer);
-            const repairedBuffer = await pdfDoc.save();
-            dataBuffer = Buffer.from(repairedBuffer);
-        } catch (repairError) {
-            console.log("Note: PDF repair not possible or not needed.");
+        // 1. Validate PDF Magic Header (%PDF-)
+        const header = dataBuffer.slice(0, 5).toString();
+        if (header !== '%PDF-') {
+            throw new Error('Invalid file type: File is not a valid PDF.');
         }
 
-        // Custom pagerender to capture text per page
+        let processingBuffer = dataBuffer;
+
+        // 2. Robust Repair using pdf-lib (Deep Cleanup)
+        // We create a brand new PDF and copy pages to strip malformed streams
+        try {
+            const originalDoc = await PDFDocument.load(dataBuffer, {
+                ignoreEncryption: true,
+                throwOnInvalidObject: false
+            });
+
+            const newDoc = await PDFDocument.create();
+            const pageIndices = originalDoc.getPageIndices();
+            const copiedPages = await newDoc.copyPages(originalDoc, pageIndices);
+
+            copiedPages.forEach((page) => newDoc.addPage(page));
+
+            const cleanBytes = await newDoc.save();
+            processingBuffer = Buffer.from(cleanBytes);
+            console.log("PDF successfully deep-repaired and normalized.");
+        } catch (repairError) {
+            console.warn("Note: Deep repair failed, attempting fallback. Error:", repairError.message);
+            // Fallback to original buffer if repair fails
+        }
+
+        // 3. Custom pagerender to capture text per page
         const pages = [];
         const options = {
             pagerender: (pageData) => {
@@ -36,13 +57,19 @@ const parsePDF = async (filePath) => {
             }
         };
 
-        await pdf(dataBuffer, options);
+        // 4. Extract Text
+        await pdf(processingBuffer, options);
+
+        if (pages.length === 0) {
+            throw new Error('No text content found in the PDF. It might be scanned or image-only.');
+        }
 
         return {
-            pages: pages, // Array of strings (one per page)
+            pages: pages,
             totalPages: pages.length
         };
     } catch (error) {
+        console.error("PDF Parsing Critical Error:", error);
         throw new Error(`Failed to parse PDF: ${error.message}`);
     }
 };
