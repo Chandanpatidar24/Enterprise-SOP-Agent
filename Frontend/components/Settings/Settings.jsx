@@ -1,0 +1,201 @@
+import React, { useState } from 'react';
+import { ArrowLeft, Lock, ChevronDown, Trash2, Shield, Users, Cpu, LogOut } from 'lucide-react';
+import CustomDropdown from '../CustomDropdown';
+
+const Settings = ({
+    t,
+    theme,
+    setTheme,
+    accentColor,
+    setAccentColor,
+    userName,
+    setUserName,
+    userEmail,
+    setUserEmail,
+    language,
+    setLanguage,
+    accentMap,
+    setView,
+    setShowAdminLogin,
+    currentUserRole,
+    setCurrentUserRole,
+    setUsersList
+}) => {
+    return (
+        <div className="flex-1 overflow-y-auto flex justify-center p-4 pt-16">
+            <div className="w-full max-w-2xl space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 mb-20">
+                <div className="flex items-center gap-4 border-b border-white/10 pb-4">
+                    <button onClick={() => setView('chat')} className="p-2 hover:bg-white/5 rounded-full"><ArrowLeft /></button>
+                    <h2 className="text-3xl font-bold">{t.settings}</h2>
+                </div>
+
+                {/* Profile Settings */}
+                <section>
+                    <h3 className="text-sm font-medium text-zinc-500 mb-3 uppercase tracking-wider">{t.profile}</h3>
+                    <div className={`p-4 rounded-xl border space-y-4 ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
+                        <div className="flex items-center gap-4">
+                            <div className={`w-16 h-16 rounded-full flex items-center justify-center text-xl font-bold text-white shadow-lg ${accentMap[accentColor]}`}>
+                                {userName.substring(0, 2).toUpperCase()}
+                            </div>
+                            <div className="flex-1">
+                                <label className="text-xs text-zinc-500 block mb-1">{t.displayName}</label>
+                                <input
+                                    value={userName}
+                                    onChange={(e) => setUserName(e.target.value)}
+                                    className={`w-full bg-transparent border-b ${theme === 'light' ? 'border-zinc-200 text-zinc-900' : 'border-zinc-700 text-white'} py-1 outline-none focus:border-blue-500 transition-colors`}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="text-xs text-zinc-500 block mb-1">{t.emailAddress}</label>
+                            <input
+                                value={userEmail}
+                                onChange={(e) => setUserEmail(e.target.value)}
+                                className={`w-full bg-transparent border-b ${theme === 'light' ? 'border-zinc-200 text-zinc-900' : 'border-zinc-700 text-white'} py-1 outline-none focus:border-blue-500 transition-colors`}
+                            />
+                        </div>
+                    </div>
+                </section>
+
+                {/* Appearance */}
+                <section>
+                    <h3 className="text-sm font-medium text-zinc-500 mb-3 uppercase tracking-wider">{t.appearance}</h3>
+                    <div className={`p-1 rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
+                        {/* Theme */}
+                        <div className="flex items-center justify-between p-4 border-b border-white/5">
+                            <div>
+                                <div className="font-medium mt-1">{t.themePreference}</div>
+                                <div className="text-sm text-zinc-500">{t.themeSub}</div>
+                            </div>
+                            <CustomDropdown
+                                theme={theme}
+                                value={theme}
+                                onChange={setTheme}
+                                options={[
+                                    { value: 'dark', label: 'Dark Mode' },
+                                    { value: 'light', label: 'Light Mode' }
+                                ]}
+                            />
+                        </div>
+
+                        {/* Accent Color */}
+                        <div className="flex items-center justify-between p-4">
+                            <div>
+                                <div className="font-medium">{t.accentColor}</div>
+                                <div className="text-sm text-zinc-500">{t.accentSub}</div>
+                            </div>
+                            <div className="flex gap-2">
+                                {['blue', 'purple', 'green', 'orange'].map((c) => (
+                                    <button
+                                        key={c}
+                                        onClick={() => setAccentColor(c)}
+                                        className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${accentMap[c]} ${accentColor === c ? 'border-white' : 'border-transparent'}`}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Role Switching for Testing */}
+                <section>
+                    <h3 className="text-sm font-medium text-zinc-500 mb-3 uppercase tracking-wider">Developer Options</h3>
+                    <div className={`p-4 rounded-xl border flex items-center justify-between ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
+                        <div>
+                            <div className="font-medium">Simulate Role</div>
+                            <div className="text-sm text-zinc-500">Switch role to test permissions</div>
+                        </div>
+                        <CustomDropdown
+                            theme={theme}
+                            value={currentUserRole}
+                            onChange={setCurrentUserRole}
+                            options={[
+                                { value: 'admin', label: 'Admin' },
+                                { value: 'manager', label: 'Manager' },
+                                { value: 'user', label: 'User' }
+                            ]}
+                        />
+                    </div>
+                </section>
+
+                {/* Admin Access Section */}
+                <section>
+                    <h3 className="text-sm font-medium text-zinc-500 mb-3 uppercase tracking-wider">Administrative</h3>
+                    <div className={`p-1 rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
+                        <button
+                            onClick={() => setShowAdminLogin(true)}
+                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors rounded-lg group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className={`p-2 rounded-lg ${theme === 'light' ? 'bg-zinc-100 text-zinc-600' : 'bg-zinc-800 text-zinc-400'}`}>
+                                    <Lock size={18} />
+                                </div>
+                                <div className="text-left">
+                                    <div className="font-medium">Admin Panel Access</div>
+                                    <div className="text-sm text-zinc-500">Manage users and system settings</div>
+                                </div>
+                            </div>
+                            <ChevronDown size={16} className="-rotate-90 opacity-50" />
+                        </button>
+                    </div>
+                </section>
+
+                {/* Language */}
+                <section>
+                    <h3 className="text-sm font-medium text-zinc-500 mb-3 uppercase tracking-wider">{t.regional}</h3>
+                    <div className={`p-4 rounded-xl border flex items-center justify-between ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
+                        <div>
+                            <div className="font-medium">{t.language}</div>
+                            <div className="text-sm text-zinc-500">{t.languageSub}</div>
+                        </div>
+                        <CustomDropdown
+                            theme={theme}
+                            value={language}
+                            onChange={setLanguage}
+                            options={[
+                                { value: 'en', label: 'English (US)' },
+                                { value: 'es', label: 'Spanish' },
+                                { value: 'fr', label: 'French' },
+                                { value: 'de', label: 'German' },
+                                { value: 'ja', label: 'Japanese' }
+                            ]}
+                        />
+                    </div>
+                </section>
+
+                {/* Account Actions */}
+                <section>
+                    <h3 className="text-sm font-medium text-red-400 mb-3 uppercase tracking-wider">{t.dangerZone}</h3>
+                    <div className={`p-1 rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
+                        <button
+                            onClick={() => { if (confirm(t.deleteAccountConfirm)) { alert(t.accountDeletionNotSupported); } }}
+                            className={`w-full flex items-center justify-between p-4 transition-all rounded-lg group mb-1 ${theme === 'light' ? 'text-zinc-700 hover:bg-red-50 hover:text-red-600' : 'text-zinc-200 hover:bg-red-500/10 hover:text-red-400'}`}
+                        >
+                            <div className="text-left">
+                                <div className="font-medium">{t.deleteAccount}</div>
+                                <div className="text-sm opacity-70">{t.deleteAccountSub}</div>
+                            </div>
+                            <Trash2 size={18} />
+                        </button>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className={`w-full flex items-center justify-between p-4 transition-all rounded-lg group ${theme === 'light' ? 'text-zinc-700 hover:bg-red-50 hover:text-red-600' : 'text-zinc-200 hover:bg-red-500/10 hover:text-red-400'}`}
+                        >
+                            <div className="text-left">
+                                <div className="font-medium">Log Out</div>
+                                <div className="text-sm opacity-70">Sign out of your session</div>
+                            </div>
+                            <LogOut size={18} />
+                        </button>
+                    </div>
+                </section>
+
+                <div className="text-center text-xs text-zinc-600 pt-8">
+                    {t.footer}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default Settings;

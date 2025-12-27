@@ -16,14 +16,8 @@
   background: #3a3a3a;
 }
 
-/* Scrollbar on the Left utility */
-.scrollbar-left {
-  direction: rtl;
-}
+/* Scrollbar on the Left utility REMOVED */
 
-.scrollbar-left>* {
-  direction: ltr;
-}
 
 /* Chat Bubbles */
 .message-user {
