@@ -1,42 +1,48 @@
-# Enterprise SOP Agent
+# OpsMind AI - Enterprise SOP Agent 🧠🚀
 
-**Project Title:** Context-Aware Corporate Knowledge Brain  
-**Product / Brand Name:** OpsMind AI
-
----
-
-## Project Overview
-
-The **Enterprise SOP Agent** is a corporate knowledge assistant that helps employees access company SOPs and internal documents efficiently.  
-It uses AI-powered semantic search to fetch relevant information from uploaded PDFs.
+**OpsMind AI** is a professional RAG (Retrieval-Augmented Generation) platform designed to transform corporate Standard Operating Procedures (SOPs) into an interactive, context-aware knowledge brain.
 
 ---
 
-## Project Goals
-
-- Build a **file upload service** for PDFs  
-- Parse PDFs and **chunk text** (1000 characters per chunk, 100-character overlap)  
-- Generate **embeddings** for each chunk and store them in MongoDB Atlas  
-- Ensure **vectors are indexed** and **searchable**  
-- Create a **frontend UI** for:
-  - Uploading PDFs
-  - Searching documents
-  - Displaying search results
+## ✨ Key Features
+- **Intelligent Knowledge Ingestion**: Upload multi-page PDFs with automatic page-aware chunking.
+- **Robust PDF Processing**: Deep repair logic to handle malformed or highly compressed enterprise documents.
+- **Semantic Vector Search**: Powered by MongoDB Atlas Vector Search for ultra-fast, contextually relevant retrieval.
+- **AI-Powered Reasoning**: Integration with Gemini 1.5 Flash for accurate, hallucination-free answers.
+- **Source Citation**: Every response includes precise file and page-number citations for verification.
+- **Admin Dashboard**: Comprehensive document management and knowledge base oversight.
 
 ---
 
-## Repo Structure
+## 🛠️ Technology Stack
+- **Frontend**: React (Vite), Tailwind CSS 4, Lucide Icons.
+- **Backend**: Node.js, Express, Mongoose.
+- **Database**: MongoDB Atlas (Vector Search Enabled).
+- **AI Layer**: Google Generative AI (Gemini 1.5 Flash + Text Embeddings).
 
+---
 
+## 📁 Project Structure
+```text
+Enterprise-SOP-Agent
+├── Backend/           # Express API, Vector Search logic, PDF Processing
+├── Frontend/          # React App, Tailwind UI, Chat Interface
+└── README.md          # Project Overview
+```
 
-enterprise-sop-agent
-├─ frontend # Frontend UI will go here
-├─ backend # Backend code will go here
-└─ README.md
+---
 
+## 🚀 Getting Started
 
+### 1. Prerequisites
+- Node.js (v18+)
+- MongoDB Atlas account with Vector Search index
+- Google Gemini API Key
 
---- 
-**Branding:** OpsMind AI – Empowering enterprise knowledge with AI
---- 
+### 2. Installation
+Detailed setup guides are available in the respective subdirectories:
+- [Backend Setup & API Documentation](./Backend/README.md)
+- [Frontend Setup & UI Configuration](./Frontend/README.md)
 
+---
+**Branding:** *OpsMind AI – Empowering enterprise knowledge with AI*
