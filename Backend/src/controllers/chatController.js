@@ -137,8 +137,8 @@ ANSWER:
     }
 };
 
-// GET /api/chat/history
-const getHistory = async (req, res) => {
+// GET /api/chat/sessions
+const getSessions = async (req, res) => {
     try {
         const sessions = await ChatSession.find()
             .select('title lastUpdated createdAt')
@@ -146,8 +146,8 @@ const getHistory = async (req, res) => {
 
         res.status(200).json({ success: true, history: sessions });
     } catch (error) {
-        console.error('Get History Error:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch history' });
+        console.error('Get Sessions Error:', error);
+        res.status(500).json({ success: true, history: [] }); // Return empty array instead of error for better frontend UX
     }
 };
 
@@ -177,5 +177,5 @@ const deleteSession = async (req, res) => {
 };
 
 
-module.exports = { askAI, getHistory, getSession, deleteSession };
+module.exports = { askAI, getSessions, getSession, deleteSession };
 

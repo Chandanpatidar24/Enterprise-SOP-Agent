@@ -256,7 +256,7 @@ export default function App() {
   // Sidebar & Profile States
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [history, setHistory] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [activeChatId, setActiveChatId] = useState(null);
 
   const fileInputRef = useRef(null);
@@ -296,21 +296,21 @@ export default function App() {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Fetch history list
-  const fetchHistory = async () => {
+  // Fetch sessions list
+  const fetchSessions = async () => {
     try {
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/history`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/sessions`);
       const data = await res.json();
       if (data.success) {
-        setHistory(data.history);
+        setSessions(data.history);
       }
     } catch (err) {
-      console.error('Failed to fetch history:', err);
+      console.error('Failed to fetch sessions:', err);
     }
   };
 
   useEffect(() => {
-    fetchHistory();
+    fetchSessions();
   }, []);
 
   // Fetch documents for Admin view
@@ -385,7 +385,7 @@ export default function App() {
         // If this was a new chat (no active ID), set the returned ID and refresh history
         if (!activeChatId && data.sessionId) {
           setActiveChatId(data.sessionId);
-          fetchHistory();
+          fetchSessions();
         }
       }
     } catch (err) {
@@ -414,12 +414,12 @@ export default function App() {
     if (view === 'settings') setView('chat');
   };
 
-  const handleHistoryClick = async (id) => {
+  const handleSessionClick = async (id) => {
     try {
       setActiveChatId(id);
       if (view === 'settings') setView('chat');
 
-      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/history/${id}`);
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/api/chat/sessions/${id}`);
       const data = await res.json();
 
       if (data.success && data.session) {
@@ -459,10 +459,10 @@ export default function App() {
           <div className="flex-1 overflow-y-auto -mx-2 px-2 custom-scrollbar">
             <div className="px-2 py-2 text-xs font-medium text-zinc-500 mb-2">{t.today}</div>
             <div className="space-y-1">
-              {history.map((item) => (
+              {sessions.map((item) => (
                 <button
                   key={item._id}
-                  onClick={() => handleHistoryClick(item._id)}
+                  onClick={() => handleSessionClick(item._id)}
                   className={`w-full flex items-center gap-3 px-3 py-3 text-sm rounded-lg transition-colors text-left truncate group relative ${activeChatId === item._id
                     ? (theme === 'light' ? 'bg-zinc-200 text-zinc-900' : 'bg-[#212121] text-white')
                     : (theme === 'light' ? 'text-zinc-600 hover:bg-zinc-100' : 'text-zinc-400 hover:bg-[#212121] hover:text-zinc-200')

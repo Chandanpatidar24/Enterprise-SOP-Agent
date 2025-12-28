@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { askAI, getHistory, getSession, deleteSession } = require('../controllers/chatController');
+const { askAI, getSessions, getSession, deleteSession } = require('../controllers/chatController');
 
 // Chat route
 router.post('/', askAI);
 
-// History routes
-router.get('/history', getHistory);
-router.get('/history/:id', getSession);
-router.delete('/history/:id', deleteSession);
+// Session history routes
+router.get('/sessions', getSessions);
+router.get('/sessions/:id', getSession);
+router.delete('/sessions/:id', deleteSession);
 
 module.exports = router;
 
