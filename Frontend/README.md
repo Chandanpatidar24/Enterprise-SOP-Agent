@@ -20,7 +20,7 @@ npm install
 ### 2. Configure Environment Variables
 Create a `.env` file in the root of the `Frontend` directory:
 ```env
-VITE_API_URL=http://localhost:5000
+VITE_API_URL=http://localhost:5001
 ```
 > [!NOTE]
 > During deployment (Vercel/Render), change this to your live backend URL.

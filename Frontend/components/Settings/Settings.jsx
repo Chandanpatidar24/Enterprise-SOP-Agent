@@ -1,6 +1,59 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Lock, ChevronDown, Trash2, Shield, Users, Cpu, LogOut } from 'lucide-react';
-import CustomDropdown from '../CustomDropdown';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, Lock, ChevronDown, Trash2, Shield, Users, Cpu, LogOut, Check } from 'lucide-react';
+
+// CustomDropdown component (inline)
+const CustomDropdown = ({ options, value, onChange, theme }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (ref.current && !ref.current.contains(event.target)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const selectedLabel = options.find(o => o.value === value)?.label || value;
+
+    return (
+        <div className="relative" ref={ref}>
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all text-sm font-medium ${theme === 'light'
+                    ? 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300'
+                    : 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:border-zinc-600'
+                    }`}
+            >
+                {selectedLabel}
+                <ChevronDown size={14} className={`opacity-60 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isOpen && (
+                <div className={`absolute left-0 mt-2 min-w-[160px] w-max p-1.5 rounded-xl border shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 ${theme === 'light'
+                    ? 'bg-white border-zinc-100 shadow-zinc-200/50'
+                    : 'bg-[#1f1f1f] border-zinc-700 shadow-black/50'
+                    }`}>
+                    {options.map((opt) => (
+                        <button
+                            key={opt.value}
+                            onClick={() => { onChange(opt.value); setIsOpen(false); }}
+                            className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center justify-between transition-all mb-0.5 last:mb-0 ${value === opt.value
+                                ? (theme === 'light' ? 'bg-zinc-100 text-zinc-900 font-medium' : 'bg-white/10 text-white font-medium')
+                                : (theme === 'light' ? 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700' : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200')
+                                }`}
+                        >
+                            {opt.label}
+                            {value === opt.value && <Check size={14} className={theme === 'light' ? 'text-black' : 'text-white'} />}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 const Settings = ({
     t,
@@ -16,9 +69,6 @@ const Settings = ({
     setLanguage,
     accentMap,
     setView,
-    setShowAdminLogin,
-    currentUserRole,
-    setCurrentUserRole,
     setUsersList
 }) => {
     return (
@@ -97,48 +147,7 @@ const Settings = ({
                     </div>
                 </section>
 
-                {/* Role Switching for Testing */}
-                <section>
-                    <h3 className="text-sm font-medium text-zinc-500 mb-3 uppercase tracking-wider">Developer Options</h3>
-                    <div className={`p-4 rounded-xl border flex items-center justify-between ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
-                        <div>
-                            <div className="font-medium">Simulate Role</div>
-                            <div className="text-sm text-zinc-500">Switch role to test permissions</div>
-                        </div>
-                        <CustomDropdown
-                            theme={theme}
-                            value={currentUserRole}
-                            onChange={setCurrentUserRole}
-                            options={[
-                                { value: 'admin', label: 'Admin' },
-                                { value: 'manager', label: 'Manager' },
-                                { value: 'user', label: 'User' }
-                            ]}
-                        />
-                    </div>
-                </section>
 
-                {/* Admin Access Section */}
-                <section>
-                    <h3 className="text-sm font-medium text-zinc-500 mb-3 uppercase tracking-wider">Administrative</h3>
-                    <div className={`p-1 rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
-                        <button
-                            onClick={() => setShowAdminLogin(true)}
-                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors rounded-lg group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className={`p-2 rounded-lg ${theme === 'light' ? 'bg-zinc-100 text-zinc-600' : 'bg-zinc-800 text-zinc-400'}`}>
-                                    <Lock size={18} />
-                                </div>
-                                <div className="text-left">
-                                    <div className="font-medium">Admin Panel Access</div>
-                                    <div className="text-sm text-zinc-500">Manage users and system settings</div>
-                                </div>
-                            </div>
-                            <ChevronDown size={16} className="-rotate-90 opacity-50" />
-                        </button>
-                    </div>
-                </section>
 
                 {/* Language */}
                 <section>

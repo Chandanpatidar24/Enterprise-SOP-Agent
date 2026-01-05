@@ -18,11 +18,15 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const searchRoutes = require('./routes/searchRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const sopRoutes = require('./routes/sopRoutes'); // Secure SOP with role-based access
+const authRoutes = require('./routes/authRoutes'); // Authentication routes
 
 app.use('/api', uploadRoutes);     // Handles /api/upload
 app.use('/api/search', searchRoutes); // Handles /api/search
 app.use('/api/admin', adminRoutes);   // Handles /api/admin/documents
-app.use('/api/chat', chatRoutes);     // Handles /api/chat
+app.use('/api/chat', chatRoutes);     // Handles /api/chat (legacy)
+app.use('/api/sop', sopRoutes);       // Handles /api/sop/* (secure role-based endpoints)
+app.use('/api/auth', authRoutes);     // Handles /api/auth/* (authentication)
 
 // Global Error Handler
 app.use((err, req, res, next) => {

@@ -15,7 +15,7 @@ const generateTitle = async (question) => {
 
 const askAI = async (req, res) => {
     try {
-        const { question, sessionId } = req.body;
+        const { question, sessionId, model } = req.body;
 
         if (!question) {
             return res.status(400).json({ success: false, message: 'Question is required' });
@@ -38,35 +38,43 @@ const askAI = async (req, res) => {
         // 2. Add User Message to Session
         session.messages.push({ role: 'user', text: question });
 
-        // 3. RAG Pipeline: Generate embedding
-        const queryVector = await generateEmbedding(question);
+        // 3. RAG Pipeline: Generate embedding (skip if fails)
+        let contextChunks = [];
+        try {
+            const queryVector = await generateEmbedding(question);
 
-        // 4. Retrieve top related chunks
-        const contextChunks = await DocumentChunk.aggregate([
-            {
-                $vectorSearch: {
-                    index: "default",
-                    path: "vector",
-                    queryVector: queryVector,
-                    numCandidates: 100,
-                    limit: 4
+            // 4. Retrieve top related chunks
+            contextChunks = await DocumentChunk.aggregate([
+                {
+                    $vectorSearch: {
+                        index: "default",
+                        path: "vector",
+                        queryVector: queryVector,
+                        numCandidates: 100,
+                        limit: 4
+                    }
+                },
+                {
+                    $project: {
+                        text: 1,
+                        sourceFile: 1,
+                        pageNumber: 1,
+                        score: { $meta: "vectorSearchScore" }
+                    }
                 }
-            },
-            {
-                $project: {
-                    text: 1,
-                    sourceFile: 1,
-                    pageNumber: 1,
-                    score: { $meta: "vectorSearchScore" }
-                }
-            }
-        ]);
+            ]);
+        } catch (embeddingError) {
+            console.warn("RAG disabled: Embedding generation failed. Using AI model without knowledge base context.");
+            // Continue without RAG - just use the AI model directly
+        }
 
         let answer = "";
         let sources = [];
 
         if (contextChunks.length === 0) {
-            answer = "I'm sorry, I couldn't find any relevant information in the uploaded SOPs to answer your question.";
+            // No RAG context available - use AI model directly
+            const directPrompt = `You are "OpsMind AI", a helpful AI assistant. Answer the following question:\n\nQuestion: ${question}\n\nProvide a helpful and accurate response.`;
+            answer = await getChatResponse(directPrompt, model);
         } else {
             // 5. Build Context
             const contextText = contextChunks.map((chunk, index) =>
@@ -93,7 +101,7 @@ ${question}
 
 ANSWER:
 `;
-            answer = await getChatResponse(prompt);
+            answer = await getChatResponse(prompt, model);
 
             // 7. Process Sources
             const sourceMap = new Set();
