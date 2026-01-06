@@ -1,91 +1,52 @@
-# Enterprise SOP Agent 🤖
+# OpsMind AI - Enterprise SOP Agent 🤖
 
-An advanced, AI-powered knowledge management system for enterprise Standard Operating Procedures (SOPs). This agent allows employees to query internal documents using natural language, receiving accurate, context-aware answers guarded by strict Role-Based Access Control (RBAC).
+An advanced, AI-powered knowledge management system for enterprise Standard Operating Procedures (SOPs). Transform your static PDFs into an interactive, conversational knowledge base with built-in security and scalability.
 
 ## 🚀 Key Features
 
-*   **Intelligent RAG Chat**: Ask questions and get answers derived *only* from your uploaded documents.
-*   **Role-Based Security**: 
-    *   **Employees**: Access general policies.
-    *   **Managers**: Access to management protocols.
-    *   **Admins**: Full system visibility.
-    *   *Note: Detailed vector-level filtering ensures users never retrieve data they aren't authorized to see.*
-*   **System Admin Panel**:
-    *   **User Management**: create users and assign roles.
-    *   **SOP Management**: Upload PDFs, set Categories, Versions, and Access Levels easily.
-    *   **Live Updates**: Changes to document access reflect immediately in the search.
-*   **Multi-Model Support**: Switch between **Gemini Pro**, **GPT-4**, and **Claude 3 Opus** for different reasoning capabilities.
-*   **Auditability**: "Explain Sources" mode shows exactly which page and document generated the answer.
+*   **Premium Interactive UI**: Features a modern, Gemini-inspired dark mode with real-time cursor spotlight effects and high-end animations.
+*   **Intelligent RAG Streaming**: Near-instant "typing" responses powered by Google Gemini and a high-performance Vector Search pipeline.
+*   **Subscription Center**: Tiered plan management (Basic, Pro, Enterprise) for scaling organizational needs.
+*   **Security-First Auth**: Comprehensive JWT-based authentication with Login/Signup flows and Role-Based Access Control (RBAC).
+*   **System Admin Panel**: Full oversight of users and SOP documents with instant access toggles.
+*   **Multi-Model Support**: Seamlessly switch between **OpsMind 4.0** (Gemini Pro), **4.2** (GPT-4), and **5.0** (Claude 3) capabilities.
+*   **Production Ready**: Fully containerized with Docker and Nginx for seamless cloud deployment.
 
 ## 🛠️ Technology Stack
 
 ### Frontend
-*   **React 19** (Vite)
-*   **Tailwind CSS v4** + **Lucide Icons**
-*   **Features/Components**:
-    *   `AdminPanel`: Full CRUD for Documents & Users.
-    *   `ChatView`: Real-time streaming chat interface.
-    *   `KnowledgeBaseView`: Browse accessible documents.
+*   **React 19** (Vite + Architecture 2.0 with Custom Hooks)
+*   **Tailwind CSS** + **Lucide Icons**
+*   **Nginx** (Production server for optimized performance)
 
 ### Backend
 *   **Node.js & Express v5**
-*   **MongoDB Atlas** (Vector Search)
+*   **MongoDB Atlas** (Vector Search & Persistent Storage)
 *   **Google Gemini AI** (Embeddings & Inference)
-*   **PDF Processing**: `pdf-parse` for text extraction and chunking.
+*   **JWT & Bcrypt** (Secure Authentication)
 
-## 📦 Installation & Setup
+## 📦 Getting Started
 
-### Prerequisites
-*   Node.js (v18+)
-*   MongoDB Atlas Account (Cluster with Vector Search enabled)
-*   Google Cloud API Key (Gemini)
+### Option 1: Docker (Recommended)
+The easiest way to run the entire stack:
+1.  Ensure **Docker Desktop** is running.
+2.  Run: `docker-compose up --build`
+3.  Frontend: `http://localhost` | Backend: `http://localhost:5000`
 
-### 1. Backend Setup
-```bash
-cd Backend
-npm install
+### Option 2: Local Development
+1.  **Backend**:
+    ```bash
+    cd Backend && npm install
+    npm run dev # Port 5000
+    ```
+2.  **Frontend**:
+    ```bash
+    cd Frontend && npm install
+    npm run dev # Port 5173
+    ```
 
-# Create .env file
-echo "PORT=5001
-MONGODB_URI=your_mongodb_connection_string
-GEMINI_API_KEY=your_google_api_key
-JWT_SECRET=your_jwt_secret" > .env
-
-# Run Server
-npm run dev
-```
-
-### 2. Frontend Setup
-```bash
-cd Frontend
-npm install
-
-# Create .env file
-echo "VITE_API_URL=http://localhost:5001" > .env
-
-# Run Client
-npm run dev
-```
-
-## 📚 Usage Guide
-
-1.  **Login**: Use default admin credentials (check seeding script) or register a new user.
-2.  **Admin Panel**:
-    *   Go to `/admin` or click "Admin Panel" in the sidebar.
-    *   **Upload SOP**: Click "Upload SOP", select a PDF, choose the Role (e.g., 'Manager'), and Upload.
-    *   **Manage Access**: Click the Check/Cross icons in the table to toggle access instantly.
-    *   **Delete**: Remove outdated documents with the Trash icon.
-3.  **Chat**:
-    *   Go to "New Chat".
-    *   Select your Model:
-        *   **OpsMind 4.0** (Gemini Pro) - *Default*
-        *   **OpsMind 4.2** (GPT-4) - *Advanced Reasoning*
-        *   **OpsMind 5.0** (Claude 3 Opus) - *Expert Analysis*
-    *   Ask: "What is the policy on remote work?"
-    *   Review sources if needed.
-
-## 🔒 Security Note
-This system uses a **Security-First RAG** approach. The Backend validates the user's role and strictly filters the Vector Search query. It is impossible for a user to semantically search for limited-access content.
+## 🚀 Deployment (Render/Cloud)
+The project is configured for one-click deployment via Docker. Connect your repository to **Render**, set your Environment Variables (`MONGODB_URI`, `GEMINI_API_KEY`), and it will automatically build and deploy.
 
 ---
-**Version**: 1.0.0
+**Version**: 1.1.0 | *OpsMind AI – Empowering enterprise knowledge*

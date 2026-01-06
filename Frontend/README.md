@@ -1,12 +1,13 @@
 # OpsMind AI - Frontend (React + Vite) 🎨
 
-This directory contains the React-based user interface for the OpsMind AI SOP Agent. It features a modern, Gemini-inspired dark theme and real-time interaction with the backend RAG pipeline.
+The highly interactive portal for the OpsMind AI Agent. Designed with a focus on visual excellence, security, and real-time performance.
 
 ## 🚀 Key Features
-- **Dynamic Chat Interface**: Seamless communication with the AI assistant.
-- **Admin Knowledge Base**: Manage uploaded documents and view indexing status.
-- **Deep PDF Support**: High-performance UI for handling complex document structures.
-- **Real-time Source Citations**: Interactive links to document pages for transparency.
+- **Architecture 2.0**: Completely refactored using specialized custom hooks (`useChat`, `useNavigation`, etc.) for maximum maintainability.
+- **Premium Aesthetics**: Interactive cursor spotlight, smooth gradients, and micro-animations for an enterprise-grade experience.
+- **Live AI Streaming**: Real-time token rendering for fluid conversational interactions.
+- **Subscription Management**: Internal portal for users to manage their organizational tiers.
+- **Production Guard**: Multi-stage Docker build powered by Nginx for high-scale document serving.
 
 ---
 
@@ -18,12 +19,10 @@ npm install
 ```
 
 ### 2. Configure Environment Variables
-Create a `.env` file in the root of the `Frontend` directory:
+Create a `.env` file in the `Frontend/` folder:
 ```env
-VITE_API_URL=http://localhost:5001
+VITE_API_URL=http://localhost:5000
 ```
-> [!NOTE]
-> During deployment (Vercel/Render), change this to your live backend URL.
 
 ### 3. Start Development Server
 ```bash
@@ -32,8 +31,11 @@ npm run dev
 
 ---
 
-## 🏗️ Architecture Note
-The frontend is built using **Vite** for optimized development and production builds. It uses **Tailwind CSS** for styling and **React** for enterprise-grade iconography.
+## 🏗️ Technical Highlights
+- **Vite 7**: Ultra-fast build toolchain.
+- **Tailwind CSS**: Utility-first styling with modern design tokens.
+- **Hooks-based State**: Clean separation of concerns between UI and logic.
+- **Nginx Config**: Custom `nginx.conf` included for robust routing in production environments.
 
 ---
 *OpsMind AI – Empowering enterprise knowledge with AI*

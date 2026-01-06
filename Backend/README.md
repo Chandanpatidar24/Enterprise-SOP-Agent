@@ -1,62 +1,39 @@
-# OpsMind AI - Enterprise Backend (Weeks 1-3)
+# OpsMind AI - Enterprise Backend 🧠
 
-A professional, enterprise-grade RAG (Retrieval-Augmented Generation) backend for managing and querying Standard Operating Procedures (SOPs).
+The backbone of the OpsMind RAG system. Handles secure document processing, vector embeddings, and real-time AI inference.
 
-## 🚀 Features
+## 🚀 Key Features
 
-### **Week 1: Knowledge Ingestion**
-- **PDF Repair & Parsing**: Automatic repair of malformed PDFs using `pdf-lib` and text extraction via `pdf-parse`.
-- **Intelligent Chunking**: Splits documents into manageable segments (1000 chars) with overlap for context retention.
-- **Vector Embeddings**: Uses Google Gemini (`text-embedding-004`) to generate 768-dimensional vectors.
-- **Atlas Storage**: Persistent storage of text and vectors in MongoDB Atlas.
+### **Security & Auth**
+- **JWT Authentication**: Full user lifecycle management with encrypted sessions.
+- **RBAC (Role Based Access Control)**: Strict filtering at the database layer to prevent unauthorized information retrieval.
+- **Enterprise Multi-tenancy**: Support for organizational logic and tiered plans.
 
-### **Week 2: Retrieval Engine**
-- **Vector Search**: High-performance similarity search using MongoDB Atlas Vector Search ($vectorSearch).
-- **Page-Aware Storage**: Chunks are mapped to specific PDF page numbers for precise source citation.
-- **Metadata Management**: Optimized search scores and document tracking.
-
-### **Week 3: Chat Agent & Admin**
-- **RAG Chat**: Context-aware AI responses using Gemini 1.5 Flash.
-- **Source Citation**: The AI explicitly cites its sources (e.g., "According to Policy.pdf, Page 4").
-- **Hallucination Control**: Strict systemic rules to prevent the AI from making up information.
-- **Admin API**: Endpoints to list all indexed documents and delete them to trigger re-indexing.
+### **RAG Engine (Knowledge Hub)**
+- **Intelligent Chunking**: Splits PDFs into optimized segments for pinpoint accuracy.
+- **Vector Embeddings**: Integrated with Google Gemini `text-embedding-004`.
+- **Streaming API**: High-performance SSE (Server-Sent Events) for real-time AI responses.
+- **Automatic PDF Repair**: Handles malformed documents seamlessly using `pdf-lib`.
 
 ## 🛠️ Tech Stack
-- **Runtime**: Node.js & Express
-- **Database**: MongoDB Atlas (with Vector Search)
-- **AI**: Google Generative AI (Gemini)
-- **PDF**: pdf-parse, pdf-lib
-- **Storage**: local ephemeral storage (with automatic cleanup)
+- **API**: Node.js & Express v5
+- **Database**: MongoDB Atlas (Vector Search enabled)
+- **AI Models**: Google Gemini (Flash & Pro)
+- **Containerization**: Docker (Node:20-slim)
 
-## 🏁 Quick Start
+## 📡 API Reference
 
-### 1. Environment Variables
-Create a `.env` file in the root:
-```env
-PORT=5000
-MONGODB_URI=your_mongodb_atlas_uri
-GEMINI_API_KEY=your_google_gemini_api_key
-```
+| Method | Endpoint | Description | Auth |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/register` | Create a new user account | Public |
+| `POST` | `/api/auth/login` | Authenticate and get JWT | Public |
+| `POST` | `/api/upload` | Upload and index a PDF | Admin/Manager |
+| `POST` | `/api/sop/ask-stream` | **Streaming** RAG Chat | User/Admin |
+| `DELETE` | `/api/admin/documents/:id` | Remove SOP from index | Admin |
 
-### 2. Installation
-```bash
-npm install
-```
+## 🏁 Setup
+1. `npm install`
+2. Create `.env`: 
+   `PORT=5000`, `MONGODB_URI=...`, `GEMINI_API_KEY=...`, `JWT_SECRET=...`
+3. `npm run dev`
 
-### 3. Run Development Server
-```bash
-npm run dev
-```
-
-## 📡 API Documentation
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/upload` | Upload and index a PDF file |
-| `POST` | `/api/search` | Search for relevant chunks |
-| `POST` | `/api/chat` | Chat with the AI about SOPs |
-| `GET` | `/api/admin/documents` | List all indexed SOP files |
-| `DELETE` | `/api/admin/documents/:filename` | Delete an SOP from the library |
-
-## 🧪 Testing
-Check the `full_testing_walkthrough.md` in the documentation folder for detailed Postman instructions.
