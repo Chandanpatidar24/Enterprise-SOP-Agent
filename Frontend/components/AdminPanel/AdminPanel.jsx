@@ -56,14 +56,69 @@ const CustomDropdown = ({ options, value, onChange, theme }) => {
     );
 };
 
-const AdminPanel = ({ theme, usersList, setUsersList, modelsList, setModelsList, setView, token, onLogout }) => {
+const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout }) => {
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [showUploadSOPModal, setShowUploadSOPModal] = useState(false);
     const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' });
     const [explainSourcesEnabled, setExplainSourcesEnabled] = useState(false);
 
+    // Users State - managed locally
+    const [usersList, setUsersList] = useState([]);
+    const [usersLoading, setUsersLoading] = useState(false);
+
     // SOP Documents State
     const [sopDocuments, setSopDocuments] = useState([]);
+
+    // Fetch users on mount
+    useEffect(() => {
+        const fetchUsers = async () => {
+            if (!token) return;
+            setUsersLoading(true);
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await res.json();
+                if (data.success) {
+                    setUsersList(data.users);
+                }
+            } catch (err) {
+                console.error("Failed to fetch users:", err);
+            } finally {
+                setUsersLoading(false);
+            }
+        };
+        fetchUsers();
+    }, [token]);
+
+    // Handle role change
+    const handleRoleChange = async (userId, newRole) => {
+        // Optimistic update
+        setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ role: newRole })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                console.error("Failed to update role:", data.message);
+                // Revert on failure - refetch
+                const refetch = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const refetchData = await refetch.json();
+                if (refetchData.success) setUsersList(refetchData.users);
+            }
+        } catch (err) {
+            console.error("Error updating role:", err);
+        }
+    };
 
     // Fetch documents on mount
     useEffect(() => {
@@ -279,18 +334,18 @@ const AdminPanel = ({ theme, usersList, setUsersList, modelsList, setModelsList,
 
     return (
         <div className="flex-1 overflow-y-auto p-4 md:p-12 relative">
-            {/* Top Bar with Logout */}
+            {/* Top Bar with Exit */}
             <div className="max-w-6xl mx-auto mb-8 flex justify-between items-center bg-[#121212] p-4 rounded-xl border border-white/5 shadow-xl">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><Shield size={20} /></div>
                     <h1 className="text-xl font-bold tracking-tight">System Admin</h1>
                 </div>
                 <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500 hover:text-white transition-all font-bold text-sm uppercase tracking-wider"
+                    onClick={() => setView('chat')}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 text-zinc-300 rounded-lg hover:bg-white/20 hover:text-white transition-all font-bold text-sm uppercase tracking-wider"
                 >
                     <LogOut size={18} />
-                    Logout
+                    Exit
                 </button>
             </div>
 
@@ -325,7 +380,22 @@ const AdminPanel = ({ theme, usersList, setUsersList, modelsList, setModelsList,
                                     </tr>
                                 </thead>
                                 <tbody className={`divide-y ${theme === 'light' ? 'divide-zinc-100' : 'divide-white/5'}`}>
-                                    {usersList.map((user) => (
+                                    {usersLoading ? (
+                                        <tr>
+                                            <td colSpan="4" className="py-8 text-center text-zinc-500">
+                                                <div className="flex items-center justify-center gap-2">
+                                                    <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin"></div>
+                                                    Loading users...
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : usersList.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" className="py-8 text-center text-zinc-500">
+                                                No users found in your organization.
+                                            </td>
+                                        </tr>
+                                    ) : usersList.map((user) => (
                                         <tr key={user.id} className={`group transition-colors ${theme === 'light' ? 'hover:bg-zinc-50' : 'hover:bg-white/[0.02]'}`}>
                                             <td className="py-5 px-6 font-bold text-base transition-colors group-hover:text-blue-400">{user.name}</td>
                                             <td className="py-5 px-6 text-zinc-500 font-medium">{user.email}</td>
@@ -341,13 +411,11 @@ const AdminPanel = ({ theme, usersList, setUsersList, modelsList, setModelsList,
                                                 <CustomDropdown
                                                     theme={theme}
                                                     value={user.role}
-                                                    onChange={(newRole) => {
-                                                        setUsersList(usersList.map(u => u.id === user.id ? { ...u, role: newRole } : u));
-                                                    }}
+                                                    onChange={(newRole) => handleRoleChange(user.id, newRole)}
                                                     options={[
                                                         { value: 'admin', label: 'Admin' },
                                                         { value: 'manager', label: 'Manager' },
-                                                        { value: 'user', label: 'User' }
+                                                        { value: 'employee', label: 'Employee' }
                                                     ]}
                                                 />
                                             </td>

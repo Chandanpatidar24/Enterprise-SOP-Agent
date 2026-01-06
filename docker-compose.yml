@@ -3,7 +3,7 @@ services:
     build: 
       context: ./Backend
     ports:
-      - "5000:5000"
+      - "5001:5001"
     env_file:
       - ./Backend/.env
     volumes:
@@ -12,6 +12,8 @@ services:
   frontend:
     build:
       context: ./Frontend
+      args:
+        - VITE_API_URL=http://localhost:5001
     ports:
       - "80:80"
     depends_on:

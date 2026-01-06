@@ -111,8 +111,6 @@ export default function App() {
       <div className={`min-h-screen ${settings.theme === 'light' ? 'bg-zinc-50' : 'bg-[#0a0a0a]'} text-zinc-100 font-sans`}>
         <AdminPanel
           theme={settings.theme}
-          usersList={[]}
-          setUsersList={() => { }}
           modelsList={settings.modelsList}
           setModelsList={settings.setModelsList}
           setView={nav.setView}

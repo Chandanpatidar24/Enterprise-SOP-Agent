@@ -1,7 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { listDocuments, deleteDocument, updateDocument } = require('../controllers/adminController');
+const { listDocuments, deleteDocument, updateDocument, listUsers, updateUserRole } = require('../controllers/adminController');
 const { authenticate } = require('../middleware/auth');
+
+// Admin User Management
+router.get('/users', authenticate, listUsers);
+router.patch('/users/:userId', authenticate, updateUserRole);
 
 // Admin Document Management (Secure)
 router.get('/documents', authenticate, listDocuments);

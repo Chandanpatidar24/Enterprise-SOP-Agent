@@ -1,4 +1,99 @@
 const DocumentChunk = require('../models/DocumentChunk');
+const User = require('../models/User');
+
+// List all users in the admin's company
+const listUsers = async (req, res) => {
+    try {
+        // Only admins can list users
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can view user list.'
+            });
+        }
+
+        // Query: Get users with same companyId OR users without companyId (legacy accounts)
+        const query = req.user.companyId
+            ? { $or: [{ companyId: req.user.companyId }, { companyId: { $exists: false } }, { companyId: null }] }
+            : {}; // If admin has no companyId, show all users (for testing/legacy)
+
+        const users = await User.find(query)
+            .select('_id username email role isActive createdAt lastLogin companyId')
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: users.length,
+            users: users.map(u => ({
+                id: u._id,
+                name: u.username || u.email.split('@')[0],
+                email: u.email,
+                role: u.role,
+                isActive: u.isActive,
+                createdAt: u.createdAt,
+                lastLogin: u.lastLogin
+            }))
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Update user role
+const updateUserRole = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const { role } = req.body;
+
+        // Only admins can update roles
+        if (req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can update user roles.'
+            });
+        }
+
+        // Validate role
+        const validRoles = ['employee', 'manager', 'admin', 'user'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid role. Must be one of: employee, manager, admin, user'
+            });
+        }
+
+        // Prevent admin from demoting themselves
+        if (userId === req.user._id.toString() && role !== 'admin') {
+            return res.status(400).json({
+                success: false,
+                message: 'You cannot demote yourself from admin role.'
+            });
+        }
+
+        const user = await User.findOneAndUpdate(
+            { _id: userId, companyId: req.user.companyId },
+            { role, updatedAt: Date.now() },
+            { new: true }
+        ).select('_id username email role');
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `User role updated to ${role}`,
+            user: {
+                id: user._id,
+                name: user.username || user.email.split('@')[0],
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 // 1. List all unique documents in the library
 const listDocuments = async (req, res) => {
@@ -133,4 +228,4 @@ const updateDocument = async (req, res) => {
     }
 };
 
-module.exports = { listDocuments, deleteDocument, updateDocument };
+module.exports = { listDocuments, deleteDocument, updateDocument, listUsers, updateUserRole };
