@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, X, Loader2, SendHorizontal, FileCheck, User, AlertCircle, Settings } from 'lucide-react';
+import { Plus, X, Loader2, SendHorizontal, FileCheck, User, AlertCircle, Settings, Sparkles, Briefcase } from 'lucide-react';
 
 // ==================== SIDEBAR COMPONENT ====================
 export const Sidebar = ({
@@ -15,7 +15,9 @@ export const Sidebar = ({
     theme,
     t,
     userRole,
-    onLogout
+    onLogout,
+    onUpgradeClick,
+    onManagePlan
 }) => {
     return (
         <aside
@@ -85,9 +87,52 @@ export const Sidebar = ({
                         />
                         <div className="flex-1 text-left">
                             <div className="text-sm font-medium truncate">{userName}</div>
-                            <div className="text-xs text-zinc-500 capitalize">{userRole || 'User'}</div>
+                            <div className={`text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md inline-block mt-1 ${userRole === 'admin'
+                                ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20'
+                                : 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                                }`}>
+                                {userRole === 'admin' ? 'Enterprise' : 'Personal 🎓'}
+                            </div>
                         </div>
                     </button>
+
+                    {/* UPGRADE PROMPT FOR PERSONAL USERS */}
+                    {userRole !== 'admin' && (
+                        <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-blue-600/20 to-purple-600/20 border border-white/5 relative overflow-hidden group">
+                            <div className="relative z-10">
+                                <h4 className="text-xs font-bold text-white mb-1">Scale Up</h4>
+                                <p className="text-[10px] text-zinc-400 leading-tight mb-3">Upgrade to Enterprise for team collaboration.</p>
+                                <button
+                                    onClick={onUpgradeClick}
+                                    className="w-full py-2 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-blue-500 hover:text-white transition-all active:scale-95"
+                                >
+                                    Go Corporate
+                                </button>
+                            </div>
+                            <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:rotate-12 transition-transform">
+                                <Sparkles size={24} className="text-white" />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* UPGRADE PROMPT FOR ENTERPRISE ADMINS */}
+                    {userRole === 'admin' && (
+                        <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-purple-600/20 to-orange-600/20 border border-white/5 relative overflow-hidden group">
+                            <div className="relative z-10">
+                                <h4 className="text-xs font-bold text-white mb-1">Enterprise Pro</h4>
+                                <p className="text-[10px] text-zinc-400 leading-tight mb-3">Unlock unlimited tokens & advanced RAG.</p>
+                                <button
+                                    onClick={onManagePlan}
+                                    className="w-full py-2 bg-zinc-800 text-white text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-white hover:text-black transition-all border border-white/10 active:scale-95"
+                                >
+                                    Manage Plan
+                                </button>
+                            </div>
+                            <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:rotate-12 transition-transform">
+                                <Briefcase size={24} className="text-white" />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </aside>

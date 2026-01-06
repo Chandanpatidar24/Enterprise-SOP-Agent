@@ -11,7 +11,9 @@ const {
     login,
     getProfile,
     getAllUsers,
-    updateUser
+    updateUser,
+    upgradeOrganization,
+    deleteAccount
 } = require('../controllers/authController');
 const { authenticate, authorize } = require('../middleware/auth');
 
@@ -40,6 +42,18 @@ router.post('/login', login);
  * Get current user's profile
  */
 router.get('/me', authenticate, getProfile);
+
+/**
+ * PATCH /api/auth/upgrade-organization
+ * Upgrade a personal organization to enterprise
+ */
+router.patch('/upgrade-organization', authenticate, upgradeOrganization);
+
+/**
+ * DELETE /api/auth/account
+ * Delete current user's account and data
+ */
+router.delete('/account', authenticate, deleteAccount);
 
 // ========================================
 // ADMIN ROUTES

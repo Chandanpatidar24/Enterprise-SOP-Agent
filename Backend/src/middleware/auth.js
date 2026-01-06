@@ -21,7 +21,8 @@ const generateToken = (user) => {
         {
             id: user._id,
             username: user.username,
-            role: user.role
+            role: user.role,
+            companyId: user.companyId // Include companyId in JWT
         },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
@@ -61,12 +62,13 @@ const authenticate = async (req, res, next) => {
             });
         }
 
-        // Attach user to request
+        // Attach user to request with companyId
         req.user = {
             id: user._id,
             username: user.username,
             email: user.email,
             role: user.role,
+            companyId: user.companyId, // Extract from user doc
             department: user.department
         };
 
@@ -140,7 +142,7 @@ const validateRole = (req, res, next) => {
 
     const normalizedRole = userRole.toLowerCase();
 
-    if (!['employee', 'manager', 'admin'].includes(normalizedRole)) {
+    if (!['employee', 'manager', 'admin', 'user'].includes(normalizedRole)) {
         return res.status(400).json({
             success: false,
             message: 'Invalid role. Must be employee, manager, or admin.'
@@ -170,7 +172,7 @@ const validateRoleQuery = (req, res, next) => {
 
     const normalizedRole = userRole.toLowerCase();
 
-    if (!['employee', 'manager', 'admin'].includes(normalizedRole)) {
+    if (!['employee', 'manager', 'admin', 'user'].includes(normalizedRole)) {
         return res.status(400).json({
             success: false,
             message: 'Invalid role. Must be employee, manager, or admin.'

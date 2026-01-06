@@ -90,18 +90,16 @@ const ChatHeader = ({
                         onChange={setSelectedModel}
                         theme={theme}
                     />
-                    {currentUserRole !== 'user' && (
-                        <button
-                            onClick={() => setView('admin')}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${theme === 'light'
-                                ? 'text-zinc-600 hover:bg-zinc-100'
-                                : 'text-zinc-400 hover:bg-[#2f2f2f]'
-                                }`}
-                        >
-                            <Database size={16} />
-                            <span className="hidden lg:inline">Knowledge Base</span>
-                        </button>
-                    )}
+                    <button
+                        onClick={() => setView('admin')}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${theme === 'light'
+                            ? 'text-zinc-600 hover:bg-zinc-100'
+                            : 'text-zinc-400 hover:bg-[#2f2f2f]'
+                            }`}
+                    >
+                        <Database size={16} />
+                        <span className="hidden lg:inline">Library</span>
+                    </button>
                 </div>
                 <button
                     onClick={() => setView('settings')}

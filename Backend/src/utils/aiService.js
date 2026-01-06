@@ -102,4 +102,14 @@ const getChatResponse = async (prompt, modelId) => {
     }
 };
 
-module.exports = { generateEmbedding, getChatResponse };
+const getChatResponseStream = async (prompt) => {
+    try {
+        const result = await chatModel.generateContentStream(prompt);
+        return result.stream;
+    } catch (error) {
+        console.error("Error getting streaming response:", error);
+        throw error;
+    }
+};
+
+module.exports = { generateEmbedding, getChatResponse, getChatResponseStream };

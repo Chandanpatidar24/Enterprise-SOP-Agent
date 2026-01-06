@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowRight, Shield, Zap, Brain, FileText, Users, ChevronDown, Check, ArrowUpRight, MessageSquare, Crown, Building2, Rocket } from 'lucide-react';
 
-const LandingPage = ({ onGetStarted }) => {
+const LandingPage = ({ onLogin, onSignup }) => {
     const [scrolled, setScrolled] = useState(false);
     const [activeFeature, setActiveFeature] = useState(0);
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
     useEffect(() => {
         const handleScroll = () => {
@@ -19,6 +20,15 @@ const LandingPage = ({ onGetStarted }) => {
             setActiveFeature((prev) => (prev + 1) % 3);
         }, 4000);
         return () => clearInterval(interval);
+    }, []);
+
+    // Spotlight effect
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            setMousePos({ x: e.clientX, y: e.clientY });
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
     const features = [
@@ -48,6 +58,13 @@ const LandingPage = ({ onGetStarted }) => {
         <div className="min-h-screen bg-[#0a0a0a] text-white overflow-x-hidden">
             {/* Animated Background */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
+                {/* Global Spotlight */}
+                <div
+                    className="absolute inset-0 z-0 transition-opacity duration-300 opacity-40"
+                    style={{
+                        background: `radial-gradient(1000px at ${mousePos.x}px ${mousePos.y}px, rgba(59, 130, 246, 0.08), transparent 80%)`
+                    }}
+                />
                 <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[120px] animate-pulse" />
                 <div className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-violet-500/5 to-cyan-500/5 rounded-full blur-[150px]" />
@@ -76,13 +93,13 @@ const LandingPage = ({ onGetStarted }) => {
 
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={onGetStarted}
+                                onClick={onLogin}
                                 className="hidden md:block text-sm text-zinc-400 hover:text-white transition-colors"
                             >
                                 Sign in
                             </button>
                             <button
-                                onClick={onGetStarted}
+                                onClick={onSignup}
                                 className="group flex items-center gap-2 px-5 py-2.5 bg-white text-black rounded-full text-sm font-medium hover:bg-zinc-200 transition-all hover:scale-105 hover:shadow-lg hover:shadow-white/20"
                             >
                                 Get Started
@@ -118,7 +135,7 @@ const LandingPage = ({ onGetStarted }) => {
                     {/* CTA Buttons */}
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
                         <button
-                            onClick={onGetStarted}
+                            onClick={onSignup}
                             className="group relative flex items-center gap-3 px-8 py-4 bg-white text-black rounded-2xl text-base font-semibold hover:bg-zinc-100 transition-all hover:scale-105 shadow-2xl shadow-white/20"
                         >
                             <MessageSquare className="w-5 h-5" />
@@ -335,63 +352,51 @@ const LandingPage = ({ onGetStarted }) => {
                     <div className="grid md:grid-cols-3 gap-6 lg:gap-8">
                         {/* Basic Plan */}
                         <div className="relative group">
-                            <div className="absolute inset-0 bg-gradient-to-b from-zinc-500/10 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="relative p-8 rounded-2xl bg-[#111] border border-white/5 hover:border-white/10 transition-all h-full flex flex-col">
+                            <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative p-8 rounded-2xl bg-[#111] border border-white/5 hover:border-blue-500/20 transition-all h-full flex flex-col">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2.5 rounded-xl bg-zinc-500/10 text-zinc-400">
+                                    <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
                                         <Rocket className="w-6 h-6" />
                                     </div>
                                     <h3 className="text-xl font-bold">Basic</h3>
                                 </div>
                                 <div className="mb-6">
                                     <div className="flex items-baseline gap-1">
-                                        <span className="text-4xl font-bold">$49</span>
+                                        <span className="text-4xl font-bold">$0</span>
                                         <span className="text-zinc-500">/month</span>
                                     </div>
-                                    <p className="text-sm text-zinc-500 mt-2">Perfect for small teams getting started</p>
+                                    <p className="text-sm text-zinc-500 mt-2">Perfect for personal knowledge mapping</p>
                                 </div>
 
                                 <div className="space-y-4 mb-8 flex-1">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-emerald-400" />
+                                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300"><strong className="text-white">50 Users</strong> included</span>
+                                        <span className="text-zinc-300">10 Documents included</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-emerald-400" />
+                                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300">Up to <strong className="text-white">15 SOPs</strong></span>
+                                        <span className="text-zinc-300">Gemini 1.5 Flash</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-emerald-400" />
+                                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300">5 GB storage</span>
+                                        <span className="text-zinc-300">Basic RAG Intelligence</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-emerald-400" />
+                                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300">OpsMind 4 AI Model</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-emerald-400" />
-                                        </div>
-                                        <span className="text-zinc-300">Email support</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-emerald-400" />
-                                        </div>
-                                        <span className="text-zinc-300">Basic analytics</span>
+                                        <span className="text-zinc-300">Web Dashboard Access</span>
                                     </div>
                                 </div>
 
                                 <button
-                                    onClick={onGetStarted}
+                                    onClick={onSignup}
                                     className="w-full py-3.5 px-6 rounded-xl border border-white/10 text-white font-semibold hover:bg-white/5 transition-all"
                                 >
                                     Get Started
@@ -399,7 +404,7 @@ const LandingPage = ({ onGetStarted }) => {
                             </div>
                         </div>
 
-                        {/* Medium Plan - Popular */}
+                        {/* Pro Plan */}
                         <div className="relative group">
                             <div className="absolute -inset-px bg-gradient-to-b from-blue-500 to-purple-500 rounded-2xl opacity-100" />
                             <div className="absolute inset-0 bg-gradient-to-b from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl" />
@@ -414,14 +419,14 @@ const LandingPage = ({ onGetStarted }) => {
                                     <div className="p-2.5 rounded-xl bg-blue-500/20 text-blue-400">
                                         <Building2 className="w-6 h-6" />
                                     </div>
-                                    <h3 className="text-xl font-bold">Medium</h3>
+                                    <h3 className="text-xl font-bold">Pro</h3>
                                 </div>
                                 <div className="mb-6">
                                     <div className="flex items-baseline gap-1">
-                                        <span className="text-4xl font-bold">$99</span>
+                                        <span className="text-4xl font-bold">$49</span>
                                         <span className="text-zinc-500">/month</span>
                                     </div>
-                                    <p className="text-sm text-zinc-500 mt-2">Best for growing organizations</p>
+                                    <p className="text-sm text-zinc-500 mt-2">Best for power users & researchers</p>
                                 </div>
 
                                 <div className="space-y-4 mb-8 flex-1">
@@ -429,66 +434,54 @@ const LandingPage = ({ onGetStarted }) => {
                                         <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                                             <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300"><strong className="text-white">100 Users</strong> included</span>
+                                        <span className="text-zinc-300"><strong className="text-white">Unlimited</strong> Documents</span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                                             <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300">Up to <strong className="text-white">75 SOPs</strong></span>
+                                        <span className="text-zinc-300">Gemini 1.5 Pro</span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                                             <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300">50 GB storage</span>
+                                        <span className="text-zinc-300">Deep context analysis</span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                                             <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300">OpsMind 4 & 4.2 AI Models</span>
+                                        <span className="text-zinc-300">Advanced Formatting</span>
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
                                             <Check className="w-3 h-3 text-blue-400" />
                                         </div>
-                                        <span className="text-zinc-300">Priority email & chat support</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-blue-400" />
-                                        </div>
-                                        <span className="text-zinc-300">Advanced analytics & reports</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-blue-400" />
-                                        </div>
-                                        <span className="text-zinc-300">API access</span>
+                                        <span className="text-zinc-300">Priority Processing</span>
                                     </div>
                                 </div>
 
                                 <button
-                                    onClick={onGetStarted}
+                                    onClick={onSignup}
                                     className="w-full py-3.5 px-6 rounded-xl bg-white text-black font-semibold hover:bg-zinc-200 transition-all shadow-lg"
                                 >
-                                    Get Started
+                                    Scale Up Now
                                 </button>
                             </div>
                         </div>
 
-                        {/* Gold Plan */}
+                        {/* Enterprise Plan */}
                         <div className="relative group">
-                            <div className="absolute inset-0 bg-gradient-to-b from-amber-500/10 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="relative p-8 rounded-2xl bg-[#111] border border-amber-500/20 hover:border-amber-500/40 transition-all h-full flex flex-col">
+                            <div className="absolute inset-0 bg-gradient-to-b from-orange-500/10 to-transparent rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="relative p-8 rounded-2xl bg-[#111] border border-orange-500/20 hover:border-orange-500/40 transition-all h-full flex flex-col">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2.5 rounded-xl bg-amber-500/20 text-amber-400">
+                                    <div className="p-2.5 rounded-xl bg-orange-500/20 text-orange-400">
                                         <Crown className="w-6 h-6" />
                                     </div>
-                                    <h3 className="text-xl font-bold">Gold</h3>
-                                    <span className="px-2 py-0.5 bg-amber-500/20 text-amber-400 text-[10px] font-bold uppercase tracking-wider rounded-full border border-amber-500/30">
-                                        Enterprise
+                                    <h3 className="text-xl font-bold">Enterprise</h3>
+                                    <span className="px-2 py-0.5 bg-orange-500/20 text-orange-400 text-[10px] font-bold uppercase tracking-wider rounded-full border border-orange-500/30">
+                                        Scale
                                     </span>
                                 </div>
                                 <div className="mb-6">
@@ -496,65 +489,47 @@ const LandingPage = ({ onGetStarted }) => {
                                         <span className="text-4xl font-bold">$199</span>
                                         <span className="text-zinc-500">/month</span>
                                     </div>
-                                    <p className="text-sm text-zinc-500 mt-2">For large enterprises with unlimited needs</p>
+                                    <p className="text-sm text-zinc-500 mt-2">Custom intelligence for large organizations</p>
                                 </div>
 
                                 <div className="space-y-4 mb-8 flex-1">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
+                                        <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-orange-400" />
                                         </div>
-                                        <span className="text-zinc-300"><strong className="text-amber-400">Unlimited Users</strong></span>
+                                        <span className="text-zinc-300">Team Collaboration</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
+                                        <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-orange-400" />
                                         </div>
-                                        <span className="text-zinc-300"><strong className="text-white">Unlimited SOPs</strong></span>
+                                        <span className="text-zinc-300">Role-Based Access Control</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
+                                        <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-orange-400" />
                                         </div>
-                                        <span className="text-zinc-300">500 GB storage</span>
+                                        <span className="text-zinc-300">Full API Access</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
+                                        <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-orange-400" />
                                         </div>
-                                        <span className="text-zinc-300">All AI Models (4, 4.2, 5)</span>
+                                        <span className="text-zinc-300">Priority Support</span>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
+                                        <div className="w-5 h-5 rounded-full bg-orange-500/20 flex items-center justify-center flex-shrink-0">
+                                            <Check className="w-3 h-3 text-orange-400" />
                                         </div>
-                                        <span className="text-zinc-300">24/7 dedicated support</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
-                                        </div>
-                                        <span className="text-zinc-300">Custom integrations</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
-                                        </div>
-                                        <span className="text-zinc-300">SSO & SAML</span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-                                            <Check className="w-3 h-3 text-amber-400" />
-                                        </div>
-                                        <span className="text-zinc-300">Dedicated account manager</span>
+                                        <span className="text-zinc-300">Custom Training Models</span>
                                     </div>
                                 </div>
 
                                 <button
-                                    onClick={onGetStarted}
-                                    className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-black font-semibold hover:from-amber-400 hover:to-orange-400 transition-all shadow-lg"
+                                    onClick={onSignup}
+                                    className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 text-black font-semibold hover:from-orange-400 hover:to-amber-400 transition-all shadow-lg"
                                 >
-                                    Contact Sales
+                                    Go Corporate
                                 </button>
                             </div>
                         </div>
@@ -588,7 +563,7 @@ const LandingPage = ({ onGetStarted }) => {
                             </p>
                             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                                 <button
-                                    onClick={onGetStarted}
+                                    onClick={onSignup}
                                     className="group flex items-center gap-3 px-8 py-4 bg-white text-black rounded-2xl text-base font-semibold hover:bg-zinc-100 transition-all hover:scale-105 shadow-2xl shadow-white/20"
                                 >
                                     Start Free Trial

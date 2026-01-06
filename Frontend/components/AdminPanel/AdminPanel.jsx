@@ -56,7 +56,7 @@ const CustomDropdown = ({ options, value, onChange, theme }) => {
     );
 };
 
-const AdminPanel = ({ theme, usersList, setUsersList, modelsList, setModelsList, setView, token }) => {
+const AdminPanel = ({ theme, usersList, setUsersList, modelsList, setModelsList, setView, token, onLogout }) => {
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [showUploadSOPModal, setShowUploadSOPModal] = useState(false);
     const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' });
@@ -262,8 +262,8 @@ const AdminPanel = ({ theme, usersList, setUsersList, modelsList, setModelsList,
     };
 
     const handleLogout = () => {
-        setView('chat');
-        window.history.pushState({}, '', '/');
+        if (onLogout) onLogout();
+        setView('landing');
     };
 
     const getCategoryColor = (category) => {

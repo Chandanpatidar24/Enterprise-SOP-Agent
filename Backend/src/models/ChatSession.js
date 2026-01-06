@@ -14,6 +14,12 @@ const messageSchema = new mongoose.Schema({
         file: String,
         page: Number
     }],
+    companyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: true,
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
@@ -21,6 +27,12 @@ const messageSchema = new mongoose.Schema({
 });
 
 const chatSessionSchema = new mongoose.Schema({
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        index: true
+    },
     title: {
         type: String,
         default: 'New Chat'
@@ -29,6 +41,12 @@ const chatSessionSchema = new mongoose.Schema({
     lastUpdated: {
         type: Date,
         default: Date.now
+    },
+    companyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: true,
+        index: true
     }
 }, { timestamps: true });
 

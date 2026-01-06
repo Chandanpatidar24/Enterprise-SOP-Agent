@@ -72,14 +72,20 @@ const DocumentChunkSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
     },
+    companyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: true,
+        index: true
+    },
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
 
-// Compound index for efficient role-based filtering + vector search
-DocumentChunkSchema.index({ accessLevel: 1, sopName: 1 });
-DocumentChunkSchema.index({ accessLevel: 1, createdAt: -1 });
+// Compound index for efficient role-based filtering + company isolation + vector search
+DocumentChunkSchema.index({ companyId: 1, accessLevel: 1, sopName: 1 });
+DocumentChunkSchema.index({ companyId: 1, accessLevel: 1, createdAt: -1 });
 
 module.exports = mongoose.model('DocumentChunk', DocumentChunkSchema);

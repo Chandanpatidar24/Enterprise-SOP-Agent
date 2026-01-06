@@ -20,7 +20,7 @@ const ROLE_HIERARCHY = {
 const UserSchema = new mongoose.Schema({
     username: {
         type: String,
-        required: true,
+        required: false,
         unique: true,
         trim: true,
         lowercase: true
@@ -40,12 +40,14 @@ const UserSchema = new mongoose.Schema({
     role: {
         type: String,
         required: true,
-        enum: ['employee', 'manager', 'admin'],
+        enum: ['employee', 'manager', 'admin', 'user'],
         default: 'employee'
     },
-    department: {
-        type: String,
-        trim: true
+    companyId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Organization',
+        required: false, // Set to false to support legacy users for now
+        index: true
     },
     isActive: {
         type: Boolean,

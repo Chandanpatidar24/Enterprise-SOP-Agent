@@ -24,13 +24,17 @@ const askAI = async (req, res) => {
         // 1. Identify or Create Session
         let session;
         if (sessionId) {
-            session = await ChatSession.findById(sessionId);
+            session = await ChatSession.findOne({ _id: sessionId, userId: req.user.id, companyId: req.user.companyId });
             if (!session) {
-                // If ID provided but not found, create new (or handle error, but creating new is safer for UX)
-                session = new ChatSession({ messages: [] });
+                // Return unauthorized or not found
+                return res.status(404).json({ success: false, message: 'Chat session not found or unauthorized' });
             }
         } else {
-            session = new ChatSession({ messages: [] });
+            session = new ChatSession({
+                messages: [],
+                userId: req.user.id, // Personal isolation
+                companyId: req.user.companyId // Company isolation
+            });
             // Generate title for new session
             session.title = await generateTitle(question);
         }
@@ -51,7 +55,8 @@ const askAI = async (req, res) => {
                         path: "vector",
                         queryVector: queryVector,
                         numCandidates: 100,
-                        limit: 4
+                        limit: 4,
+                        filter: { companyId: { $eq: req.user.companyId } } // CRITICAL: Security Filter
                     }
                 },
                 {
@@ -148,7 +153,7 @@ ANSWER:
 // GET /api/chat/sessions
 const getSessions = async (req, res) => {
     try {
-        const sessions = await ChatSession.find()
+        const sessions = await ChatSession.find({ userId: req.user.id, companyId: req.user.companyId })
             .select('title lastUpdated createdAt')
             .sort({ lastUpdated: -1 });
 
@@ -162,9 +167,9 @@ const getSessions = async (req, res) => {
 // GET /api/chat/history/:id
 const getSession = async (req, res) => {
     try {
-        const session = await ChatSession.findById(req.params.id);
+        const session = await ChatSession.findOne({ _id: req.params.id, userId: req.user.id, companyId: req.user.companyId });
         if (!session) {
-            return res.status(404).json({ success: false, message: 'Session not found' });
+            return res.status(404).json({ success: false, message: 'Session not found or unauthorized' });
         }
         res.status(200).json({ success: true, session });
     } catch (error) {
@@ -176,7 +181,10 @@ const getSession = async (req, res) => {
 // DELETE /api/chat/history/:id
 const deleteSession = async (req, res) => {
     try {
-        await ChatSession.findByIdAndDelete(req.params.id);
+        const result = await ChatSession.deleteOne({ _id: req.params.id, userId: req.user.id, companyId: req.user.companyId });
+        if (result.deletedCount === 0) {
+            return res.status(404).json({ success: false, message: 'Session not found or unauthorized' });
+        }
         res.status(200).json({ success: true, message: 'Session deleted' });
     } catch (error) {
         console.error('Delete Session Error:', error);

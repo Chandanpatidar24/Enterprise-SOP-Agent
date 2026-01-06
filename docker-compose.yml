@@ -1,0 +1,20 @@
+services:
+  backend:
+    build: 
+      context: ./Backend
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./Backend/.env
+    volumes:
+      - ./Backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./Frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    # Note: For production, Frontend needs VITE_API_URL to point to the production backend URL.
+    # Locally, it will work if you have a .env in Frontend or via Nginx proxy.

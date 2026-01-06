@@ -69,8 +69,38 @@ const Settings = ({
     setLanguage,
     accentMap,
     setView,
-    setUsersList
+    setUsersList,
+    token,
+    onLogout
 }) => {
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDeleteAccount = async () => {
+        if (!confirm(t.deleteAccountConfirm || "Are you sure you want to permanently delete your account? This action cannot be undone.")) return;
+
+        setIsDeleting(true);
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/account`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                alert("Your account has been successfully deleted.");
+                onLogout();
+            } else {
+                const data = await response.json();
+                alert(data.message || "Failed to delete account.");
+            }
+        } catch (error) {
+            console.error("Account deletion error:", error);
+            alert("An error occurred while deleting your account.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
     return (
         <div className="flex-1 overflow-y-auto flex justify-center p-4 pt-16">
             <div className="w-full max-w-2xl space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500 mb-20">
@@ -177,17 +207,18 @@ const Settings = ({
                     <h3 className="text-sm font-medium text-red-400 mb-3 uppercase tracking-wider">{t.dangerZone}</h3>
                     <div className={`p-1 rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#171717] border-white/10'}`}>
                         <button
-                            onClick={() => { if (confirm(t.deleteAccountConfirm)) { alert(t.accountDeletionNotSupported); } }}
-                            className={`w-full flex items-center justify-between p-4 transition-all rounded-lg group mb-1 ${theme === 'light' ? 'text-zinc-700 hover:bg-red-50 hover:text-red-600' : 'text-zinc-200 hover:bg-red-500/10 hover:text-red-400'}`}
+                            onClick={handleDeleteAccount}
+                            disabled={isDeleting}
+                            className={`w-full flex items-center justify-between p-4 transition-all rounded-lg group mb-1 ${isDeleting ? 'opacity-50 cursor-not-allowed' : ''} ${theme === 'light' ? 'text-zinc-700 hover:bg-red-50 hover:text-red-600' : 'text-zinc-200 hover:bg-red-500/10 hover:text-red-400'}`}
                         >
                             <div className="text-left">
-                                <div className="font-medium">{t.deleteAccount}</div>
+                                <div className="font-medium">{isDeleting ? 'Deleting...' : t.deleteAccount}</div>
                                 <div className="text-sm opacity-70">{t.deleteAccountSub}</div>
                             </div>
                             <Trash2 size={18} />
                         </button>
                         <button
-                            onClick={() => window.location.reload()}
+                            onClick={onLogout}
                             className={`w-full flex items-center justify-between p-4 transition-all rounded-lg group ${theme === 'light' ? 'text-zinc-700 hover:bg-red-50 hover:text-red-600' : 'text-zinc-200 hover:bg-red-500/10 hover:text-red-400'}`}
                         >
                             <div className="text-left">

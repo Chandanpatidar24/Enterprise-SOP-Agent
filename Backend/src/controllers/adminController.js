@@ -4,6 +4,7 @@ const DocumentChunk = require('../models/DocumentChunk');
 const listDocuments = async (req, res) => {
     try {
         const documents = await DocumentChunk.aggregate([
+            { $match: { companyId: req.user.companyId } }, // Match by company first
             {
                 $group: {
                     _id: "$sourceFile",
@@ -46,12 +47,25 @@ const listDocuments = async (req, res) => {
 const deleteDocument = async (req, res) => {
     try {
         const { filename } = req.params;
+        const Organization = require('../models/Organization');
 
         if (!filename) {
             return res.status(400).json({ success: false, message: 'Filename is required' });
         }
 
-        const result = await DocumentChunk.deleteMany({ sourceFile: filename });
+        // 1. Check if organization type is enterprise and user is not admin
+        const org = await Organization.findById(req.user.companyId);
+        if (org && org.type === 'enterprise' && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can delete company documents.'
+            });
+        }
+
+        const result = await DocumentChunk.deleteMany({
+            sourceFile: filename,
+            companyId: req.user.companyId // Ensure only company's docs are deleted
+        });
 
         if (result.deletedCount === 0) {
             return res.status(404).json({ success: false, message: 'Document not found' });
@@ -87,9 +101,22 @@ const updateDocument = async (req, res) => {
             return res.status(400).json({ success: false, message: 'No fields to update' });
         }
 
-        // Update all chunks mapping to this file
+        // 1. Check if organization type is enterprise and user is not admin
+        const Organization = require('../models/Organization');
+        const org = await Organization.findById(req.user.companyId);
+        if (org && org.type === 'enterprise' && req.user.role !== 'admin') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only administrators can update company documents.'
+            });
+        }
+
+        // Update all chunks mapping to this file and company
         const result = await DocumentChunk.updateMany(
-            { sourceFile: filename },
+            {
+                sourceFile: filename,
+                companyId: req.user.companyId
+            },
             { $set: updateFields }
         );
 

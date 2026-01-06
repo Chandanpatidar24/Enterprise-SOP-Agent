@@ -12,7 +12,7 @@
  */
 
 const ChatSession = require('../models/ChatSession');
-const { processSOPQuery, getAuthorizedDocuments, REFUSAL_MESSAGE } = require('../services/sopRagService');
+const { processSOPQuery, processSOPQueryStream, getAuthorizedDocuments, REFUSAL_MESSAGE } = require('../services/sopRagService');
 
 /**
  * Generate a short title from the question
@@ -59,11 +59,11 @@ const askSOP = async (req, res) => {
             });
         }
 
-        if (!userRole || !['employee', 'manager', 'admin'].includes(userRole)) {
+        if (!userRole || !['user', 'employee', 'manager', 'admin'].includes(userRole)) {
             console.log(`[${requestId}] Rejected: Invalid role "${userRole}"`);
             return res.status(400).json({
                 success: false,
-                message: 'Valid user role (employee, manager, or admin) is required.'
+                message: 'Valid user role (user, employee, manager, or admin) is required.'
             });
         }
 
@@ -81,16 +81,20 @@ const askSOP = async (req, res) => {
 
         let session;
         if (sessionId) {
-            session = await ChatSession.findById(sessionId);
+            session = await ChatSession.findOne({ _id: sessionId, userId: req.user.id, companyId: req.user.companyId });
             if (!session) {
                 session = new ChatSession({
                     messages: [],
+                    userId: req.user.id,
+                    companyId: req.user.companyId,
                     title: generateTitle(sanitizedQuestion)
                 });
             }
         } else {
             session = new ChatSession({
                 messages: [],
+                userId: req.user.id,
+                companyId: req.user.companyId,
                 title: generateTitle(sanitizedQuestion)
             });
         }
@@ -98,16 +102,24 @@ const askSOP = async (req, res) => {
         // Add user message to session
         session.messages.push({
             role: 'user',
-            text: sanitizedQuestion
+            text: sanitizedQuestion,
+            companyId: req.user.companyId
         });
 
         // ========================================
         // EXECUTE SECURE RAG PIPELINE
         // ========================================
 
+        // Fetch Organization name for context
+        const Organization = require('../models/Organization');
+        const org = await Organization.findById(req.user.companyId);
+
         const pipelineResult = await processSOPQuery({
             query: sanitizedQuestion,
             userRole: userRole,
+            companyId: req.user.companyId, // PASS COMPANY ID
+            companyName: org?.name || 'Your Organization', // PASS COMPANY NAME
+            userName: req.user.username, // PASS USER NAME
             models: models || {}
         });
 
@@ -119,6 +131,7 @@ const askSOP = async (req, res) => {
         session.messages.push({
             role: 'ai',
             text: pipelineResult.answer,
+            companyId: req.user.companyId,
             sources: pipelineResult.sources.map(s => ({
                 file: s.sopName,
                 page: s.page
@@ -171,14 +184,14 @@ const getDocuments = async (req, res) => {
     try {
         const { userRole } = req.query;
 
-        if (!userRole || !['employee', 'manager', 'admin'].includes(userRole)) {
+        if (!userRole || !['user', 'employee', 'manager', 'admin'].includes(userRole)) {
             return res.status(400).json({
                 success: false,
                 message: 'Valid user role is required as query parameter.'
             });
         }
 
-        const documents = await getAuthorizedDocuments(userRole);
+        const documents = await getAuthorizedDocuments(userRole, req.user.companyId);
 
         return res.status(200).json({
             success: true,
@@ -204,7 +217,7 @@ const getDocuments = async (req, res) => {
  */
 const getSessions = async (req, res) => {
     try {
-        const sessions = await ChatSession.find()
+        const sessions = await ChatSession.find({ userId: req.user.id, companyId: req.user.companyId })
             .select('title lastUpdated createdAt')
             .sort({ lastUpdated: -1 });
 
@@ -228,12 +241,12 @@ const getSessions = async (req, res) => {
  */
 const getSession = async (req, res) => {
     try {
-        const session = await ChatSession.findById(req.params.id);
+        const session = await ChatSession.findOne({ _id: req.params.id, userId: req.user.id, companyId: req.user.companyId });
 
         if (!session) {
             return res.status(404).json({
                 success: false,
-                message: 'Session not found.'
+                message: 'Session not found or unauthorized.'
             });
         }
 
@@ -257,7 +270,14 @@ const getSession = async (req, res) => {
  */
 const deleteSession = async (req, res) => {
     try {
-        await ChatSession.findByIdAndDelete(req.params.id);
+        const result = await ChatSession.deleteOne({ _id: req.params.id, userId: req.user.id, companyId: req.user.companyId });
+
+        if (result.deletedCount === 0) {
+            return res.status(404).json({
+                success: false,
+                message: 'Session not found or unauthorized.'
+            });
+        }
 
         return res.status(200).json({
             success: true,
@@ -272,8 +292,93 @@ const deleteSession = async (req, res) => {
     }
 };
 
+/**
+ * POST /api/sop/ask-stream
+ * 
+ * Streaming version of askSOP using Server-Sent Events (SSE).
+ */
+const askSOPStream = async (req, res) => {
+    const requestId = `REQ-STR-${Date.now()}`;
+
+    try {
+        const { question, userRole, sessionId } = req.body;
+
+        // 1. Validation
+        if (!question) return res.status(400).json({ success: false, message: 'Question required' });
+
+        // 2. Session Setup
+        let session;
+        if (sessionId) {
+            session = await ChatSession.findOne({ _id: sessionId, userId: req.user.id, companyId: req.user.companyId });
+        }
+        if (!session) {
+            session = new ChatSession({
+                messages: [],
+                userId: req.user.id,
+                companyId: req.user.companyId,
+                title: generateTitle(question)
+            });
+        }
+
+        // Add user message
+        session.messages.push({ role: 'user', text: question, companyId: req.user.companyId });
+
+        // 3. SECURE RAG STREAM
+        const Organization = require('../models/Organization');
+        const org = await Organization.findById(req.user.companyId);
+
+        const result = await processSOPQueryStream({
+            query: question,
+            userRole,
+            companyId: req.user.companyId,
+            companyName: org?.name || 'Your Org',
+            userName: req.user.username
+        });
+
+        // 4. Set SSE Headers
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+
+        if (result.isRefusal) {
+            res.write(`data: ${JSON.stringify({ answer: result.answer, done: true })}\n\n`);
+            return res.end();
+        }
+
+        // 5. Stream Tokens
+        let fullAnswer = "";
+        for await (const chunk of result.stream) {
+            const text = chunk.text();
+            fullAnswer += text;
+            res.write(`data: ${JSON.stringify({ token: text })}\n\n`);
+        }
+
+        // 6. Save Session & Send Final Metadata
+        session.messages.push({
+            role: 'ai',
+            text: fullAnswer,
+            companyId: req.user.companyId,
+            sources: result.sources?.map(s => ({ file: s.sopName, page: s.page })) || []
+        });
+        await session.save();
+
+        res.write(`data: ${JSON.stringify({
+            done: true,
+            sessionId: session._id,
+            sources: result.sources
+        })}\n\n`);
+        res.end();
+
+    } catch (error) {
+        console.error(`[${requestId}] Stream Error:`, error);
+        res.write(`data: ${JSON.stringify({ error: 'Stream failed', done: true })}\n\n`);
+        res.end();
+    }
+};
+
 module.exports = {
     askSOP,
+    askSOPStream,
     getDocuments,
     getSessions,
     getSession,

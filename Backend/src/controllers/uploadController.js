@@ -38,7 +38,9 @@ const uploadPDF = async (req, res) => {
         }
 
         // Extract and validate access level
-        const accessLevel = req.body.accessLevel?.toLowerCase() || 'employee';
+        // For Personal users, we default to 'employee' access or similar, but since it's isolated by companyId, it's safe.
+        const accessLevel = req.user.role === 'user' ? 'employee' : (req.body.accessLevel?.toLowerCase() || 'employee');
+
         if (!VALID_ACCESS_LEVELS.includes(accessLevel)) {
             // Clean up uploaded file
             if (fs.existsSync(req.file.path)) {
@@ -92,6 +94,7 @@ const uploadPDF = async (req, res) => {
                     pageNumber: pageNumber,
                     section: defaultSection,
                     accessLevel: accessLevel, // CRITICAL: Role-based access tag
+                    companyId: req.user.companyId, // CRITICAL: Company isolation tag
                     category: req.body.category || 'General',
                     version: req.body.version || '1.0',
                     effectiveDate: req.body.effectiveDate,

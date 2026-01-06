@@ -9,11 +9,13 @@ const express = require('express');
 const router = express.Router();
 const {
     askSOP,
+    askSOPStream,
     getDocuments,
     getSessions,
     getSession,
     deleteSession
 } = require('../controllers/sopChatController');
+const { authenticate } = require('../middleware/auth');
 
 // ========================================
 // QUERY ENDPOINTS (Role-Based)
@@ -24,13 +26,14 @@ const {
  * Submit a question to the SOP AI system
  * Body: { question, userRole, sessionId?, models? }
  */
-router.post('/ask', askSOP);
+router.post('/ask', authenticate, askSOP);
+router.post('/ask-stream', authenticate, askSOPStream);
 
 /**
  * GET /api/sop/documents?userRole=employee|manager|admin
  * Get list of authorized SOP documents for the user's role
  */
-router.get('/documents', getDocuments);
+router.get('/documents', authenticate, getDocuments);
 
 // ========================================
 // SESSION MANAGEMENT
@@ -40,18 +43,18 @@ router.get('/documents', getDocuments);
  * GET /api/sop/sessions
  * Get all chat sessions
  */
-router.get('/sessions', getSessions);
+router.get('/sessions', authenticate, getSessions);
 
 /**
  * GET /api/sop/session/:id
  * Get a specific chat session
  */
-router.get('/session/:id', getSession);
+router.get('/session/:id', authenticate, getSession);
 
 /**
  * DELETE /api/sop/session/:id
  * Delete a chat session
  */
-router.delete('/session/:id', deleteSession);
+router.delete('/session/:id', authenticate, deleteSession);
 
 module.exports = router;

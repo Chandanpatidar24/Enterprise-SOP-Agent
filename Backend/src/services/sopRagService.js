@@ -20,11 +20,12 @@
  */
 
 const DocumentChunk = require('../models/DocumentChunk');
-const { generateEmbedding, getChatResponse } = require('../utils/aiService');
+const { generateEmbedding, getChatResponse, getChatResponseStream } = require('../utils/aiService');
 
 // Role hierarchy for access level comparison
 const ROLE_HIERARCHY = {
-    employee: 1,
+    user: 1,      // Personal usage
+    employee: 1,  // Enterprise bottom-tier
     manager: 2,
     admin: 3
 };
@@ -52,15 +53,16 @@ const getAccessibleLevels = (userRole) => {
  * @param {string} userRole - User's role
  * @returns {Object} MongoDB filter for authorized chunks
  */
-const buildRoleFilter = (userRole) => {
+const buildRoleFilter = (userRole, companyId) => {
     const accessibleLevels = getAccessibleLevels(userRole);
 
     if (accessibleLevels.length === 0) {
         // No access - return impossible filter
-        return { accessLevel: { $in: [] } };
+        return { companyId: companyId, accessLevel: { $in: [] } };
     }
 
     return {
+        companyId: companyId, // CRITICAL: Company Isolation
         accessLevel: { $in: accessibleLevels }
     };
 };
@@ -74,12 +76,12 @@ const buildRoleFilter = (userRole) => {
  * @param {number} limit - Max chunks to retrieve (default: 5)
  * @returns {Promise<Array>} Authorized and relevant chunks
  */
-const performSecureVectorSearch = async (query, userRole, limit = 5) => {
+const performSecureVectorSearch = async (query, userRole, companyId, limit = 5) => {
     // Generate query embedding using Gemini
     const queryVector = await generateEmbedding(query);
 
-    // Build role-based pre-filter
-    const roleFilter = buildRoleFilter(userRole);
+    // Build role-based pre-filter with Company ID
+    const roleFilter = buildRoleFilter(userRole, companyId);
 
     // Get accessible levels for logging
     const accessibleLevels = getAccessibleLevels(userRole);
@@ -125,9 +127,13 @@ const performSecureVectorSearch = async (query, userRole, limit = 5) => {
  * NO paraphrasing, NO inference - exact text only.
  * 
  * @param {Array} chunks - Retrieved document chunks
+ * @param {string} query - Original user query
+ * @param {string} model - Model to use
+ * @param {string} companyName - Name of the organization
+ * @param {string} userName - Name of the user
  * @returns {Promise<Object>} Extracted facts with full citations
  */
-const extractFacts = async (chunks, query, model) => {
+const extractFacts = async (chunks, query, model, companyName, userName) => {
     if (!chunks || chunks.length === 0) {
         return { facts: [], hasContent: false };
     }
@@ -155,6 +161,10 @@ STRICT RULES:
 
 QUERY TO ADDRESS:
 ${query}
+
+USER CONTEXT:
+User: ${userName}
+Organization: ${companyName}
 
 SOP DOCUMENT CHUNKS:
 ${contextText}
@@ -203,9 +213,11 @@ Extract facts now. If no relevant content is found for the query, set found_rele
  * @param {Object} extractedFacts - Facts from Step 4
  * @param {string} query - Original user query
  * @param {string} model - Model to use for generation
+ * @param {string} companyName - Name of the organization
+ * @param {string} userName - Name of the user
  * @returns {Promise<string>} Generated answer with citations
  */
-const generateAnswer = async (extractedFacts, query, model) => {
+const generateAnswer = async (extractedFacts, query, model, companyName, userName) => {
     if (!extractedFacts.hasContent || extractedFacts.facts.length === 0) {
         return REFUSAL_MESSAGE;
     }
@@ -228,6 +240,10 @@ ABSOLUTE RULES:
 
 USER QUESTION:
 ${query}
+
+USER CONTEXT:
+User: ${userName}
+Organization: ${companyName}
 
 EXTRACTED FACTS FROM SOPs:
 ${factsText}
@@ -334,10 +350,13 @@ Verify now:`;
  * @param {Object} params
  * @param {string} params.query - User's question
  * @param {string} params.userRole - User's role (employee|manager|admin)
+ * @param {string} params.companyId - User's company ID
+ * @param {string} params.companyName - User's company name
+ * @param {string} params.userName - User's username
  * @param {Object} params.models - Model configuration for each step
  * @returns {Promise<Object>} Final response with answer, sources, and metadata
  */
-const processSOPQuery = async ({ query, userRole, models = {} }) => {
+const processSOPQuery = async ({ query, userRole, companyId, companyName = 'Your Organization', userName = 'User', models = {} }) => {
     const startTime = Date.now();
     const pipelineLog = [];
 
@@ -351,7 +370,7 @@ const processSOPQuery = async ({ query, userRole, models = {} }) => {
         };
     }
 
-    if (!['employee', 'manager', 'admin'].includes(userRole)) {
+    if (!['user', 'employee', 'manager', 'admin'].includes(userRole)) {
         return {
             success: false,
             answer: 'Invalid user role.',
@@ -372,11 +391,8 @@ const processSOPQuery = async ({ query, userRole, models = {} }) => {
         pipelineLog.push({ step: 1, action: 'RECEIVE_REQUEST', timestamp: Date.now() });
         console.log(`[RAG Pipeline] Processing query for role: ${userRole}`);
 
-        // STEP 2 & 3: Role-based filtering + Vector search
-        pipelineLog.push({ step: 2, action: 'ROLE_FILTER', timestamp: Date.now() });
-        let chunks;
         try {
-            chunks = await performSecureVectorSearch(query, userRole, 5);
+            chunks = await performSecureVectorSearch(query, userRole, companyId, 5);
         } catch (embeddingError) {
             console.error('[RAG] Vector search failed:', embeddingError);
             return {
@@ -406,7 +422,7 @@ const processSOPQuery = async ({ query, userRole, models = {} }) => {
 
         // STEP 4: Fact Extraction
         pipelineLog.push({ step: 4, action: 'FACT_EXTRACTION', timestamp: Date.now() });
-        const extractedFacts = await extractFacts(chunks, query, modelConfig.extraction);
+        const extractedFacts = await extractFacts(chunks, query, modelConfig.extraction, companyName, userName);
 
         if (!extractedFacts.hasContent) {
             console.log('[RAG] No relevant facts extracted - returning refusal');
@@ -425,7 +441,7 @@ const processSOPQuery = async ({ query, userRole, models = {} }) => {
 
         // STEP 5: Answer Generation
         pipelineLog.push({ step: 5, action: 'ANSWER_GENERATION', timestamp: Date.now() });
-        const rawAnswer = await generateAnswer(extractedFacts, query, modelConfig.generation);
+        const rawAnswer = await generateAnswer(extractedFacts, query, modelConfig.generation, companyName, userName);
 
         // STEP 6: Compliance Verification
         pipelineLog.push({ step: 6, action: 'COMPLIANCE_VERIFICATION', timestamp: Date.now() });
@@ -481,8 +497,8 @@ const processSOPQuery = async ({ query, userRole, models = {} }) => {
  * Utility: Get role-restricted document list
  * Returns only documents the user is authorized to see.
  */
-const getAuthorizedDocuments = async (userRole) => {
-    const roleFilter = buildRoleFilter(userRole);
+const getAuthorizedDocuments = async (userRole, companyId) => {
+    const roleFilter = buildRoleFilter(userRole, companyId);
 
     const documents = await DocumentChunk.aggregate([
         { $match: roleFilter },
@@ -499,6 +515,7 @@ const getAuthorizedDocuments = async (userRole) => {
             $project: {
                 sopName: '$_id',
                 sourceFile: 1,
+                filename: '$sourceFile', // Alias for frontend
                 accessLevel: 1,
                 chunkCount: 1,
                 lastUpdated: 1,
@@ -511,8 +528,84 @@ const getAuthorizedDocuments = async (userRole) => {
     return documents;
 };
 
+/**
+ * SECURE STREAMING PIPELINE
+ * Similar to processSOPQuery but streams the generation phase.
+ */
+const processSOPQueryStream = async ({ query, userRole, companyId, companyName, userName, models = {} }) => {
+    const startTime = Date.now();
+    const modelConfig = {
+        extraction: models.extraction || 'gemini-flash-latest',
+        generation: models.generation || 'gemini-flash-latest'
+    };
+
+    try {
+        // STEP 1-3: Intent & Vector Search
+        const chunks = await performSecureVectorSearch(query, userRole, companyId);
+
+        if (!chunks || chunks.length === 0) {
+            return {
+                isRefusal: true,
+                answer: REFUSAL_MESSAGE,
+                sources: []
+            };
+        }
+
+        // STEP 4: Fact Extraction
+        const extractedFacts = await extractFacts(chunks, query, modelConfig.extraction, companyName, userName);
+
+        if (!extractedFacts.hasContent) {
+            return {
+                isRefusal: true,
+                answer: REFUSAL_MESSAGE,
+                sources: []
+            };
+        }
+
+        // STEP 5: Start Generation Stream
+        const factsText = extractedFacts.facts.map((fact, index) =>
+            `FACT ${index + 1}:\n"${fact.exact_text}"\nSource: ${fact.sop_name} - Page ${fact.page_number}`
+        ).join('\n\n');
+
+        const generationPrompt = `You are a professional SOP assistant. Generate a clear, accurate answer using ONLY the provided facts.
+
+ABSOLUTE RULES:
+1. Use ONLY the facts provided below - no other knowledge
+2. EVERY statement MUST have a citation in format: (SOP Name – Page X)
+3. Do NOT add explanations beyond what the SOP text states
+4. Maintain a neutral, professional tone
+
+USER QUESTION: ${query}
+USER CONTEXT: User: ${userName}, Org: ${companyName}
+
+EXTRACTED FACTS:
+${factsText}
+
+Generate your answer now with proper citations:`;
+
+        const stream = await getChatResponseStream(generationPrompt);
+
+        return {
+            success: true,
+            stream,
+            sources: extractedFacts.facts.map(f => ({
+                sopName: f.sop_name,
+                page: f.page_number
+            })),
+            metadata: {
+                processingTime: Date.now() - startTime
+            }
+        };
+
+    } catch (error) {
+        console.error('[RAG-Stream] Pipeline Error:', error);
+        throw error;
+    }
+};
+
 module.exports = {
     processSOPQuery,
+    processSOPQueryStream,
     performSecureVectorSearch,
     extractFacts,
     generateAnswer,

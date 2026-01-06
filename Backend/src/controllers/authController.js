@@ -15,9 +15,9 @@ const { generateToken } = require('../middleware/auth');
  */
 const register = async (req, res) => {
     try {
-        const { username, email, password, role, department } = req.body;
+        const { username, email, password, signupType, companyName, plan } = req.body;
 
-        // Validate required fields
+        // 1. Validate required fields
         if (!username || !email || !password) {
             return res.status(400).json({
                 success: false,
@@ -25,7 +25,7 @@ const register = async (req, res) => {
             });
         }
 
-        // Check if user already exists
+        // 2. Check if user already exists
         const existingUser = await User.findOne({
             $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
         });
@@ -37,25 +37,56 @@ const register = async (req, res) => {
             });
         }
 
-        // Validate role
-        const validRoles = ['employee', 'manager', 'admin'];
-        const userRole = (role && validRoles.includes(role.toLowerCase()))
-            ? role.toLowerCase()
-            : 'employee';
+        // 3. Multi-Tenancy Logic (Personal vs Enterprise)
+        const Organization = require('../models/Organization');
+        let companyId;
+        let finalRole = 'user'; // Default for personal usage
 
-        // Create user
+        if (signupType === 'enterprise' || companyName) {
+            // Enterprise Path
+            const slug = (companyName || `${username}-org`).toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+            let org = await Organization.findOne({ slug });
+            if (!org) {
+                org = await Organization.create({
+                    name: companyName || `${username}'s Org`,
+                    slug: slug,
+                    adminEmail: email.toLowerCase(),
+                    type: 'enterprise',
+                    plan: plan || 'free'
+                });
+            }
+            companyId = org._id;
+            finalRole = 'admin'; // Owner of the new enterprise org
+        } else {
+            // Personal Path
+            const personalOrgName = `${username}'s Library`;
+            const slug = `personal-${username.toLowerCase()}-${Date.now()}`;
+
+            const org = await Organization.create({
+                name: personalOrgName,
+                slug: slug,
+                adminEmail: email.toLowerCase(),
+                type: 'personal',
+                plan: 'free'
+            });
+            companyId = org._id;
+            finalRole = 'user'; // Individual user
+        }
+
+        // 4. Create User with correct isolation
         const user = await User.create({
             username: username.toLowerCase(),
             email: email.toLowerCase(),
             password: password,
-            role: userRole,
-            department: department || ''
+            role: finalRole,
+            companyId: companyId
         });
 
         // Generate token
         const token = generateToken(user);
 
-        console.log(`[Auth] New user registered: ${user.username} (${user.role})`);
+        console.log(`[Auth] New user registered: ${user.username} (${user.role}) Type: ${signupType || 'personal'}`);
 
         return res.status(201).json({
             success: true,
@@ -132,7 +163,7 @@ const login = async (req, res) => {
         // Generate token
         const token = generateToken(user);
 
-        console.log(`[Auth] User logged in: ${user.username} (${user.role})`);
+        console.log(`[Auth] User logged in: ${user.username || user.email} (${user.role})`);
 
         return res.status(200).json({
             success: true,
@@ -281,10 +312,138 @@ const updateUser = async (req, res) => {
     }
 };
 
+/**
+ * PATCH /api/auth/upgrade-organization
+ * 
+ * Upgrade a personal organization to enterprise.
+ */
+const upgradeOrganization = async (req, res) => {
+    try {
+        const { companyName, plan } = req.body;
+
+        if (!companyName) {
+            return res.status(400).json({
+                success: false,
+                message: 'Company name is required for enterprise upgrade.'
+            });
+        }
+
+        // 1. Find the current user's organization
+        const Organization = require('../models/Organization');
+        const org = await Organization.findById(req.user.companyId);
+
+        if (!org) {
+            return res.status(404).json({
+                success: false,
+                message: 'Organization not found.'
+            });
+        }
+
+        if (org.type === 'enterprise') {
+            return res.status(400).json({
+                success: false,
+                message: 'Organization is already an enterprise account.'
+            });
+        }
+
+        // 2. Update Organization details
+        const slug = companyName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+        // Check if slug is already taken (different from current one)
+        const existingOrg = await Organization.findOne({ slug, _id: { $ne: org._id } });
+        if (existingOrg) {
+            return res.status(409).json({
+                success: false,
+                message: 'This company name is already registered.'
+            });
+        }
+
+        org.name = companyName;
+        org.slug = slug;
+        org.type = 'enterprise';
+        org.plan = plan || 'free';
+        org.subscriptionStatus = 'trial'; // Start a fresh trial for the new enterprise org
+        await org.save();
+
+        // 3. Upgrade user to admin (if they are currently just a personal user)
+        const user = await User.findById(req.user.id);
+        if (user) {
+            user.role = 'admin';
+            await user.save();
+        }
+
+        console.log(`[Auth] Workspace upgraded: ${org.name} (Admin: ${user.username})`);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Workspace upgraded to enterprise successfully.',
+            data: {
+                organizationName: org.name,
+                type: org.type,
+                plan: org.plan,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('[Auth] Upgrade error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Upgrade failed. Please try again.'
+        });
+    }
+};
+
+/**
+ * DELETE /api/auth/account
+ * 
+ * Permanently delete the user's account and all associated data.
+ */
+const deleteAccount = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const companyId = req.user.companyId;
+
+        // 1. Delete all user data
+        const ChatSession = require('../models/ChatSession');
+        const DocumentChunk = require('../models/DocumentChunk');
+        const Organization = require('../models/Organization');
+
+        await ChatSession.deleteMany({ userId });
+
+        // If they are an admin or personal user, we might want to delete org-wide data
+        // For simplicity and safety for now, we delete documents tied to their specific companyId
+        // IF they are the only user or it's a personal account.
+        const org = await Organization.findById(companyId);
+        if (org && (org.type === 'personal' || (org.type === 'enterprise' && req.user.role === 'admin'))) {
+            await DocumentChunk.deleteMany({ companyId });
+            await Organization.findByIdAndDelete(companyId);
+        }
+
+        // 2. Delete the user
+        await User.findByIdAndDelete(userId);
+
+        console.log(`[Auth] Account deleted: ${req.user.username} (${userId})`);
+
+        return res.status(200).json({
+            success: true,
+            message: 'Account and associated data deleted successfully.'
+        });
+
+    } catch (error) {
+        console.error('[Auth] Account deletion error:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to delete account. Please try again.'
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
     getProfile,
     getAllUsers,
-    updateUser
+    updateUser,
+    upgradeOrganization,
+    deleteAccount
 };
