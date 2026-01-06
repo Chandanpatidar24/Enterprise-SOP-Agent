@@ -16,6 +16,7 @@ export const useNavigation = (isAuthenticated) => {
     const [showUpgradeModal, setShowUpgradeModal] = useState(false);
     const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
     const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
 
     // Handle browser back/forward buttons
     useEffect(() => {
@@ -70,6 +71,8 @@ export const useNavigation = (isAuthenticated) => {
         },
         authMode,
         isProfileOpen,
-        setIsProfileOpen
+        setIsProfileOpen,
+        isAdminAuthenticated,
+        setIsAdminAuthenticated
     };
 };

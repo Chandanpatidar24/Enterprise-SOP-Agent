@@ -59,7 +59,7 @@ const CustomDropdown = ({ options, value, onChange, theme }) => {
 const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout }) => {
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [showUploadSOPModal, setShowUploadSOPModal] = useState(false);
-    const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' });
+    const [newUser, setNewUser] = useState({ name: '', email: '', role: 'employee' });
     const [explainSourcesEnabled, setExplainSourcesEnabled] = useState(false);
 
     // Users State - managed locally
@@ -93,6 +93,10 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
 
     // Handle role change
     const handleRoleChange = async (userId, newRole) => {
+        // Store old role for potential revert
+        const oldUser = usersList.find(u => u.id === userId);
+        const oldRole = oldUser?.role;
+
         // Optimistic update
         setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
 
@@ -106,17 +110,81 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                 body: JSON.stringify({ role: newRole })
             });
             const data = await res.json();
-            if (!data.success) {
+
+            if (data.success) {
+                console.log("Role updated successfully:", data);
+            } else {
                 console.error("Failed to update role:", data.message);
-                // Revert on failure - refetch
-                const refetch = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const refetchData = await refetch.json();
-                if (refetchData.success) setUsersList(refetchData.users);
+                alert(`Failed to update role: ${data.message}`);
+                // Revert on failure
+                setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: oldRole } : u));
             }
         } catch (err) {
             console.error("Error updating role:", err);
+            alert(`Error updating role: ${err.message}`);
+            // Revert on error
+            setUsersList(prev => prev.map(u => u.id === userId ? { ...u, role: oldRole } : u));
+        }
+    };
+
+    // Handle organization type change
+    const handleOrgTypeChange = async (userId, newOrgType) => {
+        const oldUser = usersList.find(u => u.id === userId);
+        const oldOrgType = oldUser?.orgType;
+
+        // Optimistic update
+        setUsersList(prev => prev.map(u => u.id === userId ? { ...u, orgType: newOrgType } : u));
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}/org-type`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ orgType: newOrgType })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                console.log("Org type updated successfully:", data);
+            } else {
+                console.error("Failed to update org type:", data.message);
+                alert(`Failed to update organization type: ${data.message}`);
+                setUsersList(prev => prev.map(u => u.id === userId ? { ...u, orgType: oldOrgType } : u));
+            }
+        } catch (err) {
+            console.error("Error updating org type:", err);
+            alert(`Error updating organization type: ${err.message}`);
+            setUsersList(prev => prev.map(u => u.id === userId ? { ...u, orgType: oldOrgType } : u));
+        }
+    };
+
+    // Handle delete user
+    const handleDeleteUser = async (userId, userName) => {
+        if (!confirm(`Are you sure you want to delete user "${userName}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users/${userId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                // Remove user from list
+                setUsersList(prev => prev.filter(u => u.id !== userId));
+                alert(data.message);
+            } else {
+                alert(`Failed to delete user: ${data.message}`);
+            }
+        } catch (err) {
+            console.error("Error deleting user:", err);
+            alert(`Error deleting user: ${err.message}`);
         }
     };
 
@@ -165,13 +233,49 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
     // File State
     const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
-    const [uploading, setUploading] = useState(false);
+    const [addingUser, setAddingUser] = useState(false);
 
-    const handleAddUser = (e) => {
+    const handleAddUser = async (e) => {
         e.preventDefault();
-        setNewUser({ name: '', email: '', role: 'user' });
-        setShowAddUserModal(false);
+        if (!newUser.email) {
+            alert('Email is required');
+            return;
+        }
+
+        setAddingUser(true);
+        try {
+            const res = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/users`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    name: newUser.name,
+                    email: newUser.email,
+                    role: newUser.role
+                })
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                // Add user to list
+                setUsersList(prev => [data.user, ...prev]);
+                setNewUser({ name: '', email: '', role: 'employee' });
+                setShowAddUserModal(false);
+                alert(`User created successfully!\n\nTemporary Password: ${data.tempPassword}\n\nPlease share this with the user.`);
+            } else {
+                alert(data.message || 'Failed to create user');
+            }
+        } catch (err) {
+            console.error('Create user error:', err);
+            alert('Failed to create user');
+        } finally {
+            setAddingUser(false);
+        }
     };
+
+    const [uploading, setUploading] = useState(false);
 
     const handleFileSelect = (e) => {
         const file = e.target.files[0];
@@ -193,7 +297,7 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
 
         try {
             const formData = new FormData();
-            formData.append('file', selectedFile);
+            formData.append('pdf', selectedFile);
             formData.append('sopName', newSOP.name || selectedFile.name);
             formData.append('category', newSOP.category);
             formData.append('accessLevel', newSOP.accessLevel);
@@ -376,13 +480,15 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                                         <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">User</th>
                                         <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Email</th>
                                         <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Role</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px] text-right">Action</th>
+                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Organization</th>
+                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Action</th>
+                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px] text-right">Delete</th>
                                     </tr>
                                 </thead>
                                 <tbody className={`divide-y ${theme === 'light' ? 'divide-zinc-100' : 'divide-white/5'}`}>
                                     {usersLoading ? (
                                         <tr>
-                                            <td colSpan="4" className="py-8 text-center text-zinc-500">
+                                            <td colSpan="6" className="py-8 text-center text-zinc-500">
                                                 <div className="flex items-center justify-center gap-2">
                                                     <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin"></div>
                                                     Loading users...
@@ -391,7 +497,7 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                                         </tr>
                                     ) : usersList.length === 0 ? (
                                         <tr>
-                                            <td colSpan="4" className="py-8 text-center text-zinc-500">
+                                            <td colSpan="6" className="py-8 text-center text-zinc-500">
                                                 No users found in your organization.
                                             </td>
                                         </tr>
@@ -407,7 +513,18 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                                                     {user.role}
                                                 </span>
                                             </td>
-                                            <td className="py-5 px-6 text-right">
+                                            <td className="py-5 px-6">
+                                                <CustomDropdown
+                                                    theme={theme}
+                                                    value={user.orgType || 'personal'}
+                                                    onChange={(newType) => handleOrgTypeChange(user.id, newType)}
+                                                    options={[
+                                                        { value: 'personal', label: 'Personal' },
+                                                        { value: 'enterprise', label: 'Enterprise' }
+                                                    ]}
+                                                />
+                                            </td>
+                                            <td className="py-5 px-6">
                                                 <CustomDropdown
                                                     theme={theme}
                                                     value={user.role}
@@ -418,6 +535,15 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                                                         { value: 'employee', label: 'Employee' }
                                                     ]}
                                                 />
+                                            </td>
+                                            <td className="py-5 px-6 text-right">
+                                                <button
+                                                    onClick={() => handleDeleteUser(user.id, user.name)}
+                                                    className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 rounded-lg transition-colors"
+                                                    title="Delete User"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
@@ -554,8 +680,8 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                         <form onSubmit={handleAddUser} className="space-y-6">
                             <div><label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Full Name</label><input autoFocus placeholder="e.g. Michael Scott" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} className="w-full px-4 py-4 rounded-xl bg-[#1a1a1a] border border-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold placeholder:text-zinc-700 placeholder:font-medium" /></div>
                             <div><label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Email Address</label><input placeholder="e.g. michael@dundermifflin.com" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} className="w-full px-4 py-4 rounded-xl bg-[#1a1a1a] border border-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold placeholder:text-zinc-700 placeholder:font-medium" /></div>
-                            <div><label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Assign Role</label><div className="grid grid-cols-3 gap-2 p-1 bg-[#1a1a1a] rounded-xl border border-white/5">{['admin', 'manager', 'user'].map((r) => (<button key={r} type="button" onClick={() => setNewUser({ ...newUser, role: r })} className={`py-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${newUser.role === r ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}>{r}</button>))}</div></div>
-                            <button type="submit" className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-zinc-200 transition-all shadow-xl active:scale-[0.98] mt-4">Register User</button>
+                            <div><label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Assign Role</label><div className="grid grid-cols-3 gap-2 p-1 bg-[#1a1a1a] rounded-xl border border-white/5">{['admin', 'manager', 'employee'].map((r) => (<button key={r} type="button" onClick={() => setNewUser({ ...newUser, role: r })} className={`py-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${newUser.role === r ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}>{r}</button>))}</div></div>
+                            <button type="submit" disabled={addingUser} className={`w-full py-4 font-black uppercase tracking-widest rounded-xl transition-all shadow-xl active:scale-[0.98] mt-4 ${addingUser ? 'bg-zinc-700 text-zinc-400 cursor-wait' : 'bg-white text-black hover:bg-zinc-200'}`}>{addingUser ? 'Creating...' : 'Register User'}</button>
                         </form>
                     </div>
                 </div>

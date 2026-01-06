@@ -101,12 +101,57 @@ export default function App() {
     );
   }
 
-  // 2. Authenticated-Only Views (Admin Panel)
+  // 2. Admin Panel with Auth Gate
   if (nav.view === 'adminPanel') {
     if (user?.role !== 'admin') {
       nav.setView('chat');
       return null;
     }
+
+    // Check if admin is authenticated for this session
+    if (!nav.isAdminAuthenticated) {
+      return (
+        <div className={`min-h-screen flex items-center justify-center ${settings.theme === 'light' ? 'bg-zinc-50' : 'bg-[#0a0a0a]'} text-zinc-100 font-sans`}>
+          <div className="w-full max-w-md p-8 rounded-2xl border bg-[#121212] border-white/10 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-2xl font-bold tracking-tight">Admin Authentication</h3>
+              <button
+                onClick={() => nav.setView('chat')}
+                className="text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            <p className="text-sm text-zinc-500 mb-6">Enter admin password to access the System Admin panel.</p>
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              const password = e.target.adminPassword.value;
+              if (password === 'admin123') {
+                nav.setIsAdminAuthenticated(true);
+              } else {
+                alert('Invalid admin password');
+              }
+            }} className="space-y-4">
+              <input
+                name="adminPassword"
+                type="password"
+                placeholder="Enter admin password"
+                autoFocus
+                className="w-full px-4 py-4 rounded-xl bg-[#1a1a1a] border border-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold placeholder:text-zinc-700 placeholder:font-medium"
+              />
+              <button
+                type="submit"
+                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-zinc-200 transition-all shadow-xl active:scale-[0.98]"
+              >
+                Access Admin Panel
+              </button>
+            </form>
+            <p className="text-xs text-zinc-600 mt-4 text-center">Default password: admin123</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className={`min-h-screen ${settings.theme === 'light' ? 'bg-zinc-50' : 'bg-[#0a0a0a]'} text-zinc-100 font-sans`}>
         <AdminPanel
