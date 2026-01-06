@@ -191,7 +191,10 @@ const getDocuments = async (req, res) => {
             });
         }
 
+        console.log(`[getDocuments] Fetching for role: ${userRole}, companyId: ${req.user.companyId} (${typeof req.user.companyId})`);
+
         const documents = await getAuthorizedDocuments(userRole, req.user.companyId);
+        console.log(`[getDocuments] Found ${documents.length} documents`);
 
         return res.status(200).json({
             success: true,

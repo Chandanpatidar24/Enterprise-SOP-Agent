@@ -61,9 +61,32 @@ const buildRoleFilter = (userRole, companyId) => {
         return { companyId: companyId, accessLevel: { $in: [] } };
     }
 
+    // MATCH LOGIC:
+    // 1. Company ID matches user's ID OR is null/missing
+    // 2. AND Access Level is in accessible levels OR is null/missing
+    const companyIds = companyId ? [companyId, null] : [null];
+
+    // We construct the query carefully.
+    // Since we need to allow (CompanyID Match OR Null) AND (AccessLevel Match OR Null),
+    // and MongoDB doesn't allow multiple top-level $or operators, we use $and.
+
+    const companyCondition = companyId
+        ? { $or: [{ companyId: companyId }, { companyId: null }, { companyId: { $exists: false } }] }
+        : { $or: [{ companyId: null }, { companyId: { $exists: false } }] };
+
+    const accessCondition = {
+        $or: [
+            { accessLevel: { $in: accessibleLevels } },
+            { accessLevel: null },
+            { accessLevel: { $exists: false } }
+        ]
+    };
+
     return {
-        companyId: companyId, // CRITICAL: Company Isolation
-        accessLevel: { $in: accessibleLevels }
+        $and: [
+            companyCondition,
+            accessCondition
+        ]
     };
 };
 
@@ -504,7 +527,8 @@ const getAuthorizedDocuments = async (userRole, companyId) => {
         { $match: roleFilter },
         {
             $group: {
-                _id: '$sopName',
+                _id: '$sourceFile', // Group by filename (unique), not sopName (might be null)
+                sopName: { $first: '$sopName' },
                 sourceFile: { $first: '$sourceFile' },
                 accessLevel: { $first: '$accessLevel' },
                 chunkCount: { $sum: 1 },
@@ -513,16 +537,16 @@ const getAuthorizedDocuments = async (userRole, companyId) => {
         },
         {
             $project: {
-                sopName: '$_id',
+                sopName: { $ifNull: ["$sopName", "$_id"] }, // Fallback to filename if sopName missing
                 sourceFile: 1,
-                filename: '$sourceFile', // Alias for frontend
+                filename: '$_id', // Alias for frontend
                 accessLevel: 1,
                 chunkCount: 1,
                 lastUpdated: 1,
                 _id: 0
             }
         },
-        { $sort: { sopName: 1 } }
+        { $sort: { filename: 1 } }
     ]);
 
     return documents;

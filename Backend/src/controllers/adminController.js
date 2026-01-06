@@ -279,8 +279,15 @@ const deleteUser = async (req, res) => {
 // 1. List all unique documents in the library
 const listDocuments = async (req, res) => {
     try {
+        // Match logic:
+        // 1. If admin has companyId: Show company docs + legacy docs (no companyId)
+        // 2. If admin has NO companyId: Show all docs (assuming super admin or legacy mode)
+        const matchQuery = req.user.companyId
+            ? { $or: [{ companyId: req.user.companyId }, { companyId: null }, { companyId: { $exists: false } }] }
+            : {};
+
         const documents = await DocumentChunk.aggregate([
-            { $match: { companyId: req.user.companyId } }, // Match by company first
+            { $match: matchQuery }, // Improved match
             {
                 $group: {
                     _id: "$sourceFile",

@@ -60,8 +60,10 @@ export default function App() {
   }, [isAuthenticated, user]);
 
   useEffect(() => {
-    if (nav.view === 'admin') kb.fetchDocuments();
-  }, [nav.view]);
+    if (nav.view === 'admin' && user && token) {
+      kb.fetchDocuments();
+    }
+  }, [nav.view, user, token]);
 
   const handlePlusClick = () => fileInputRef.current?.click();
 
