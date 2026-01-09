@@ -6,11 +6,13 @@ An advanced, AI-powered knowledge management system for enterprise Standard Oper
 
 *   **Premium Interactive UI**: Features a modern, Gemini-inspired dark mode with real-time cursor spotlight effects and high-end animations.
 *   **Intelligent RAG Streaming**: Near-instant "typing" responses powered by Google Gemini and a high-performance Vector Search pipeline.
-*   **Subscription Center**: Tiered plan management (Basic, Pro, Enterprise) for scaling organizational needs.
-*   **Security-First Auth**: Comprehensive JWT-based authentication with Login/Signup flows and Role-Based Access Control (RBAC).
-*   **System Admin Panel**: Full oversight of users and SOP documents with instant access toggles.
+*   **Usage Policy Enforcement**: Automated limits for Free Trial users (max 3 users, 3 PDFs) to manage scalability.
+*   **Security-First Auth**: Comprehensive JWT-based authentication with Role-Based Access Control (RBAC) and **manual password** override for admins.
+*   **Modular Admin Dashboard**: Extracted component architecture for users and SOP management with instant permission toggles.
 *   **Multi-Model Support**: Seamlessly switch between **OpsMind 4.0** (Gemini Pro), **4.2** (GPT-4), and **5.0** (Claude 3) capabilities.
-*   **Production Ready**: Fully containerized with Docker and Nginx for seamless cloud deployment.
+*   **Cross-Org Isolation**: Strict data multi-tenancy ensures companies never see each other's private SOPs.
+*   **Production Ready**: Fully containerized with Docker and Nginx, optimized for cloud deployment.
+
 
 ## 🛠️ Technology Stack
 
@@ -45,8 +47,9 @@ The easiest way to run the entire stack:
     npm run dev # Port 5173
     ```
 
-## 🚀 Deployment (Render/Cloud)
-The project is configured for one-click deployment via Docker. Connect your repository to **Render**, set your Environment Variables (`MONGODB_URI`, `GEMINI_API_KEY`), and it will automatically build and deploy.
+## 🌐 Live Preview
+Visit the live application: [Enterprise SOP Agent on Render](https://enterprise-sop-agent-frontend.onrender.com/)
 
 ---
-**Version**: 1.1.0 | *OpsMind AI – Empowering enterprise knowledge*
+**Version**: 1.2.0 | *OpsMind AI – Empowering enterprise knowledge*
+

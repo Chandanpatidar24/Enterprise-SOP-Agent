@@ -1,65 +1,17 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Users, Cpu, Database, LogOut, Plus, X, Shield, FileText, Info, Eye, Calendar, Tag, Layers, ChevronDown, Check, Upload, Trash2 } from 'lucide-react';
+import UserTable from './components/UserTable';
+import SopTable from './components/SopTable';
+import CustomDropdown from './components/CustomDropdown';
 
-// CustomDropdown component (inline)
-const CustomDropdown = ({ options, value, onChange, theme }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const ref = useRef(null);
+// CustomDropdown removed from here and moved to separate file
 
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (ref.current && !ref.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const selectedLabel = options.find(o => o.value === value)?.label || value;
-
-    return (
-        <div className="relative" ref={ref}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-all text-sm font-medium ${theme === 'light'
-                    ? 'bg-white border-zinc-200 text-zinc-700 hover:border-zinc-300'
-                    : 'bg-zinc-800 border-zinc-700 text-zinc-200 hover:border-zinc-600'
-                    }`}
-            >
-                {selectedLabel}
-                <ChevronDown size={14} className={`opacity-60 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-            </button>
-
-            {isOpen && (
-                <div className={`absolute left-0 mt-2 min-w-[160px] w-max p-1.5 rounded-xl border shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100 ${theme === 'light'
-                    ? 'bg-white border-zinc-100 shadow-zinc-200/50'
-                    : 'bg-[#1f1f1f] border-zinc-700 shadow-black/50'
-                    }`}>
-                    {options.map((opt) => (
-                        <button
-                            key={opt.value}
-                            onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                            className={`w-full text-left px-3 py-2 text-sm rounded-lg flex items-center justify-between transition-all mb-0.5 last:mb-0 ${value === opt.value
-                                ? (theme === 'light' ? 'bg-zinc-100 text-zinc-900 font-medium' : 'bg-white/10 text-white font-medium')
-                                : (theme === 'light' ? 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-700' : 'text-zinc-400 hover:bg-white/5 hover:text-zinc-200')
-                                }`}
-                        >
-                            {opt.label}
-                            {value === opt.value && <Check size={14} className={theme === 'light' ? 'text-black' : 'text-white'} />}
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-};
 
 const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout }) => {
     const [showAddUserModal, setShowAddUserModal] = useState(false);
     const [showUploadSOPModal, setShowUploadSOPModal] = useState(false);
-    const [newUser, setNewUser] = useState({ name: '', email: '', role: 'employee' });
+    const [newUser, setNewUser] = useState({ name: '', email: '', role: 'employee', password: '', useManualPassword: false });
     const [explainSourcesEnabled, setExplainSourcesEnabled] = useState(false);
 
     // Users State - managed locally
@@ -234,6 +186,7 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
     const [selectedFile, setSelectedFile] = useState(null);
     const fileInputRef = useRef(null);
     const [addingUser, setAddingUser] = useState(false);
+    const [createdCredentials, setCreatedCredentials] = useState(null);
 
     const handleAddUser = async (e) => {
         e.preventDefault();
@@ -253,7 +206,8 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                 body: JSON.stringify({
                     name: newUser.name,
                     email: newUser.email,
-                    role: newUser.role
+                    role: newUser.role,
+                    password: newUser.useManualPassword ? newUser.password : undefined
                 })
             });
             const data = await res.json();
@@ -261,9 +215,15 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
             if (data.success) {
                 // Add user to list
                 setUsersList(prev => [data.user, ...prev]);
-                setNewUser({ name: '', email: '', role: 'employee' });
+
+                // Show Success Modal instead of Alert
+                setCreatedCredentials({
+                    email: data.user.email,
+                    password: data.tempPassword
+                });
+
+                setNewUser({ name: '', email: '', role: 'employee', password: '', useManualPassword: false });
                 setShowAddUserModal(false);
-                alert(`User created successfully!\n\nTemporary Password: ${data.tempPassword}\n\nPlease share this with the user.`);
             } else {
                 alert(data.message || 'Failed to create user');
             }
@@ -456,101 +416,16 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
             <div className="max-w-6xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="grid gap-6">
                     {/* User Management */}
-                    <section className={`rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#121212] border-white/5'} overflow-hidden shadow-2xl`}>
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                            <div className="flex items-center gap-4">
-                                <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-xl shadow-inner"><Users size={24} /></div>
-                                <div>
-                                    <h3 className="text-xl font-bold tracking-tight">User Management</h3>
-                                    <p className="text-sm text-zinc-500 font-medium">Control user roles and access</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setShowAddUserModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-zinc-200 transition-all font-bold text-sm uppercase tracking-wider shadow-lg"
-                            >
-                                <Plus size={18} />
-                                Add User
-                            </button>
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm border-collapse">
-                                <thead>
-                                    <tr className={`border-b ${theme === 'light' ? 'bg-zinc-50 text-zinc-500' : 'bg-[#1a1a1a] text-zinc-400'}`}>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">User</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Email</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Role</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Organization</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Action</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px] text-right">Delete</th>
-                                    </tr>
-                                </thead>
-                                <tbody className={`divide-y ${theme === 'light' ? 'divide-zinc-100' : 'divide-white/5'}`}>
-                                    {usersLoading ? (
-                                        <tr>
-                                            <td colSpan="6" className="py-8 text-center text-zinc-500">
-                                                <div className="flex items-center justify-center gap-2">
-                                                    <div className="w-4 h-4 border-2 border-zinc-500 border-t-transparent rounded-full animate-spin"></div>
-                                                    Loading users...
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : usersList.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="6" className="py-8 text-center text-zinc-500">
-                                                No users found in your organization.
-                                            </td>
-                                        </tr>
-                                    ) : usersList.map((user) => (
-                                        <tr key={user.id} className={`group transition-colors ${theme === 'light' ? 'hover:bg-zinc-50' : 'hover:bg-white/[0.02]'}`}>
-                                            <td className="py-5 px-6 font-bold text-base transition-colors group-hover:text-blue-400">{user.name}</td>
-                                            <td className="py-5 px-6 text-zinc-500 font-medium">{user.email}</td>
-                                            <td className="py-5 px-6">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-[0.1em] shadow-sm ${user.role === 'admin' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
-                                                    user.role === 'manager' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' :
-                                                        'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
-                                                    }`}>
-                                                    {user.role}
-                                                </span>
-                                            </td>
-                                            <td className="py-5 px-6">
-                                                <CustomDropdown
-                                                    theme={theme}
-                                                    value={user.orgType || 'personal'}
-                                                    onChange={(newType) => handleOrgTypeChange(user.id, newType)}
-                                                    options={[
-                                                        { value: 'personal', label: 'Personal' },
-                                                        { value: 'enterprise', label: 'Enterprise' }
-                                                    ]}
-                                                />
-                                            </td>
-                                            <td className="py-5 px-6">
-                                                <CustomDropdown
-                                                    theme={theme}
-                                                    value={user.role}
-                                                    onChange={(newRole) => handleRoleChange(user.id, newRole)}
-                                                    options={[
-                                                        { value: 'admin', label: 'Admin' },
-                                                        { value: 'manager', label: 'Manager' },
-                                                        { value: 'employee', label: 'Employee' }
-                                                    ]}
-                                                />
-                                            </td>
-                                            <td className="py-5 px-6 text-right">
-                                                <button
-                                                    onClick={() => handleDeleteUser(user.id, user.name)}
-                                                    className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 rounded-lg transition-colors"
-                                                    title="Delete User"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </section>
+                    <UserTable
+                        theme={theme}
+                        usersList={usersList}
+                        usersLoading={usersLoading}
+                        handleOrgTypeChange={handleOrgTypeChange}
+                        handleRoleChange={handleRoleChange}
+                        handleDeleteUser={handleDeleteUser}
+                        setShowAddUserModal={setShowAddUserModal}
+                    />
+
 
                     {/* Models Section ... */}
                     <section className={`rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#121212] border-white/5'} overflow-hidden shadow-2xl`}>
@@ -560,106 +435,15 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                     </section>
 
                     {/* SOP Access Control */}
-                    <section className={`rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#121212] border-white/5'} overflow-hidden shadow-2xl`}>
-                        <div className="p-6 border-b border-white/5 flex justify-between items-center">
-                            <div className="flex items-center gap-4">
-                                <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl shadow-inner"><FileText size={24} /></div>
-                                <div>
-                                    <h3 className="text-xl font-bold tracking-tight">SOP Access Control</h3>
-                                    <p className="text-sm text-zinc-500 font-medium">Control which roles can access each document</p>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setShowUploadSOPModal(true)}
-                                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-black rounded-lg hover:bg-amber-400 transition-all font-bold text-sm uppercase tracking-wider shadow-lg"
-                            >
-                                <Plus size={18} />
-                                Upload SOP
-                            </button>
-                        </div>
+                    <SopTable
+                        theme={theme}
+                        sopDocuments={sopDocuments}
+                        toggleSOPAccess={toggleSOPAccess}
+                        handleDeleteSOP={handleDeleteSOP}
+                        setShowUploadSOPModal={setShowUploadSOPModal}
+                        getCategoryColor={getCategoryColor}
+                    />
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm border-collapse">
-                                <thead>
-                                    <tr className={`border-b ${theme === 'light' ? 'bg-zinc-50 text-zinc-500' : 'bg-[#1a1a1a] text-zinc-400'}`}>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">SOP Document</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Category</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px]">Version</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Employee</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Manager</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px] text-center">Admin</th>
-                                        <th className="py-3 px-6 font-bold uppercase tracking-wider text-[11px] text-right">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody className={`divide-y ${theme === 'light' ? 'divide-zinc-100' : 'divide-white/5'}`}>
-                                    {sopDocuments.map((sop) => (
-                                        <tr key={sop.id} className={`group transition-colors ${theme === 'light' ? 'hover:bg-zinc-50' : 'hover:bg-white/[0.02]'}`}>
-                                            <td className="py-4 px-6">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-white/5 rounded-lg">
-                                                        <FileText size={16} className="text-zinc-400" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-bold text-sm transition-colors group-hover:text-amber-400">{sop.name}</div>
-                                                        <div className="text-[10px] text-zinc-500">Effective: {sop.effectiveDate}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-[0.1em] border ${getCategoryColor(sop.category)}`}>
-                                                    {sop.category}
-                                                </span>
-                                            </td>
-                                            <td className="py-4 px-6 text-zinc-500 font-medium">v{sop.version}</td>
-                                            <td className="py-4 px-6 text-center">
-                                                <button
-                                                    onClick={() => toggleSOPAccess(sop, 'employee')}
-                                                    className={`w-8 h-8 rounded-lg transition-all mx-auto flex items-center justify-center hover:scale-110 ${sop.access.employee
-                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                                        : 'bg-red-500/10 text-red-400/50 border border-red-500/20'
-                                                        }`}
-                                                >
-                                                    {sop.access.employee ? '✓' : '✕'}
-                                                </button>
-                                            </td>
-                                            <td className="py-4 px-6 text-center">
-                                                <button
-                                                    onClick={() => toggleSOPAccess(sop, 'manager')}
-                                                    className={`w-8 h-8 rounded-lg transition-all mx-auto flex items-center justify-center hover:scale-110 ${sop.access.manager
-                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                                        : 'bg-red-500/10 text-red-400/50 border border-red-500/20'
-                                                        }`}
-                                                >
-                                                    {sop.access.manager ? '✓' : '✕'}
-                                                </button>
-                                            </td>
-                                            <td className="py-4 px-6 text-center">
-                                                <button
-                                                    onClick={() => toggleSOPAccess(sop, 'admin')}
-                                                    className={`w-8 h-8 rounded-lg transition-all mx-auto flex items-center justify-center cursor-default ${sop.access.admin
-                                                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                                                        : 'bg-red-500/10 text-red-400/50 border border-red-500/20'
-                                                        }`}
-                                                >
-                                                    {sop.access.admin ? '✓' : '✕'}
-                                                </button>
-                                            </td>
-                                            <td className="py-4 px-6 text-right">
-                                                <button
-                                                    onClick={() => handleDeleteSOP(sop.filename || sop.id)}
-                                                    className="p-2 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                                                    title="Delete Document"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="px-6 py-4 bg-white/[0.02] border-t border-white/5"><div className="flex items-center gap-6 text-[11px] text-zinc-500"><span className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[10px]">✓</span>Has Access</span><span className="flex items-center gap-2"><span className="w-4 h-4 rounded bg-red-500/10 text-red-400/50 flex items-center justify-center text-[10px]">✕</span>No Access</span></div></div>
-                    </section>
 
                     {/* Admin Tools ... same */}
                     <section className={`rounded-xl border ${theme === 'light' ? 'bg-white border-zinc-200' : 'bg-[#121212] border-white/5'} overflow-hidden shadow-2xl`}>
@@ -681,8 +465,89 @@ const AdminPanel = ({ theme, modelsList, setModelsList, setView, token, onLogout
                             <div><label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Full Name</label><input autoFocus placeholder="e.g. Michael Scott" value={newUser.name} onChange={(e) => setNewUser({ ...newUser, name: e.target.value })} className="w-full px-4 py-4 rounded-xl bg-[#1a1a1a] border border-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold placeholder:text-zinc-700 placeholder:font-medium" /></div>
                             <div><label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Email Address</label><input placeholder="e.g. michael@dundermifflin.com" value={newUser.email} onChange={(e) => setNewUser({ ...newUser, email: e.target.value })} className="w-full px-4 py-4 rounded-xl bg-[#1a1a1a] border border-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold placeholder:text-zinc-700 placeholder:font-medium" /></div>
                             <div><label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Assign Role</label><div className="grid grid-cols-3 gap-2 p-1 bg-[#1a1a1a] rounded-xl border border-white/5">{['admin', 'manager', 'employee'].map((r) => (<button key={r} type="button" onClick={() => setNewUser({ ...newUser, role: r })} className={`py-3 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${newUser.role === r ? 'bg-white text-black shadow-lg' : 'text-zinc-500 hover:text-zinc-300'}`}>{r}</button>))}</div></div>
+
+                            <div className="pt-2">
+                                <label className="flex items-center gap-3 cursor-pointer group">
+                                    <div className="relative">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only"
+                                            checked={newUser.useManualPassword}
+                                            onChange={(e) => setNewUser({ ...newUser, useManualPassword: e.target.checked })}
+                                        />
+                                        <div className={`w-10 h-5 rounded-full transition-colors ${newUser.useManualPassword ? 'bg-blue-500' : 'bg-white/10'}`}></div>
+                                        <div className={`absolute top-1 left-1 w-3 h-3 rounded-full bg-white transition-transform ${newUser.useManualPassword ? 'translate-x-5' : ''}`}></div>
+                                    </div>
+                                    <span className="text-xs font-bold text-zinc-400 group-hover:text-zinc-200 transition-colors uppercase tracking-widest">Set Password Manually</span>
+                                </label>
+                            </div>
+
+                            {newUser.useManualPassword && (
+                                <div className="animate-in slide-in-from-top-2 duration-200">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-2">Manual Password</label>
+                                    <input
+                                        type="text"
+                                        placeholder="Min. 8 characters"
+                                        value={newUser.password}
+                                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                        className="w-full px-4 py-4 rounded-xl bg-[#1a1a1a] border border-white/5 text-white outline-none focus:ring-2 focus:ring-blue-500/50 transition-all font-bold placeholder:text-zinc-700 placeholder:font-medium"
+                                    />
+                                    <p className="text-[10px] text-zinc-600 mt-2 italic font-medium">Leave blank for auto-generation</p>
+                                </div>
+                            )}
+
                             <button type="submit" disabled={addingUser} className={`w-full py-4 font-black uppercase tracking-widest rounded-xl transition-all shadow-xl active:scale-[0.98] mt-4 ${addingUser ? 'bg-zinc-700 text-zinc-400 cursor-wait' : 'bg-white text-black hover:bg-zinc-200'}`}>{addingUser ? 'Creating...' : 'Register User'}</button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Success Modal for New User */}
+            {createdCredentials && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="w-full max-w-md p-8 rounded-2xl border bg-[#121212] border-white/10 shadow-2xl scale-100">
+                        <div className="text-center mb-6">
+                            <div className="w-16 h-16 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Check size={32} />
+                            </div>
+                            <h3 className="text-2xl font-bold tracking-tight text-white">User Created!</h3>
+                            <p className="text-zinc-400 mt-2">Share these credentials with the user.</p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-1">Email</label>
+                                <div className="text-white font-mono">{createdCredentials.email}</div>
+                            </div>
+
+                            <div className="bg-white/5 p-4 rounded-xl border border-white/5">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] block mb-1">Temporary Password</label>
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="text-emerald-400 font-mono text-lg font-bold tracking-wider">{createdCredentials.password}</div>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(createdCredentials.password);
+                                            alert('Password copied to clipboard!');
+                                        }}
+                                        className="p-2 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors"
+                                        title="Copy Password"
+                                    >
+                                        <div className="flex items-center gap-2 text-xs font-bold uppercase">
+                                            <span>Copy</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="mt-8">
+                            <button
+                                onClick={() => setCreatedCredentials(null)}
+                                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-xl hover:bg-zinc-200 transition-all shadow-xl active:scale-[0.98]"
+                            >
+                                Done
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

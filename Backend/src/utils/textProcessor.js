@@ -8,66 +8,101 @@ const parsePDF = async (filePath) => {
         const dataBuffer = fs.readFileSync(filePath);
 
         // 1. Validate PDF Magic Header (%PDF-)
-        const header = dataBuffer.slice(0, 5).toString();
-        if (header !== '%PDF-') {
-            throw new Error('Invalid file type: File is not a valid PDF.');
+        // Relaxed check: Look for %PDF- within the first 1024 bytes
+        const headerSearch = dataBuffer.slice(0, 1024).toString();
+        if (!headerSearch.includes('%PDF-')) {
+            throw new Error('Invalid file type: File is not a valid PDF (No %PDF- header found).');
         }
 
-        let processingBuffer = dataBuffer;
-
-        // 2. Robust Repair using pdf-lib (Deep Cleanup)
-        // We create a brand new PDF and copy pages to strip malformed streams
+        // STRATEGY 1: Try parsing original buffer
         try {
-            const originalDoc = await PDFDocument.load(dataBuffer, {
-                ignoreEncryption: true,
-                throwOnInvalidObject: false
-            });
+            console.log("Attempting to parse original PDF...");
+            // We use a separate function or just call it here. 
+            // We need to access pages.
+            // Let's refactor slightly to avoid duplication.
 
-            const newDoc = await PDFDocument.create();
-            const pageIndices = originalDoc.getPageIndices();
-            const copiedPages = await newDoc.copyPages(originalDoc, pageIndices);
-
-            copiedPages.forEach((page) => newDoc.addPage(page));
-
-            const cleanBytes = await newDoc.save();
-            processingBuffer = Buffer.from(cleanBytes);
-            console.log("PDF successfully deep-repaired and normalized.");
-        } catch (repairError) {
-            console.warn("Note: Deep repair failed, attempting fallback. Error:", repairError.message);
-            // Fallback to original buffer if repair fails
-        }
-
-        // 3. Custom pagerender to capture text per page
-        const pages = [];
-        const options = {
-            pagerender: (pageData) => {
-                return pageData.getTextContent().then((textContent) => {
-                    let lastY, text = '';
-                    for (let item of textContent.items) {
-                        if (lastY == item.transform[5] || !lastY) {
-                            text += item.str;
-                        } else {
-                            text += '\n' + item.str;
-                        }
-                        lastY = item.transform[5];
+            const extractText = async (buffer) => {
+                let extractedPages = [];
+                await pdf(buffer, {
+                    pagerender: (pageData) => {
+                        return pageData.getTextContent().then((textContent) => {
+                            let lastY, text = '';
+                            for (let item of textContent.items) {
+                                if (lastY == item.transform[5] || !lastY) {
+                                    text += item.str;
+                                } else {
+                                    text += '\n' + item.str;
+                                }
+                                lastY = item.transform[5];
+                            }
+                            extractedPages.push(text);
+                            return text;
+                        });
                     }
-                    pages.push(text);
-                    return text;
                 });
+                return extractedPages;
+            };
+
+            const pages = await extractText(dataBuffer);
+            if (pages.length > 0) {
+                return { pages, totalPages: pages.length };
             }
-        };
+            throw new Error("No text found in original PDF");
 
-        // 4. Extract Text
-        await pdf(processingBuffer, options);
+        } catch (originalError) {
+            console.warn("Original PDF parse failed/empty, attempting deep repair...", originalError.message);
 
-        if (pages.length === 0) {
-            throw new Error('No text content found in the PDF. It might be scanned or image-only.');
+            // STRATEGY 2: Deep Repair
+            try {
+                const originalDoc = await PDFDocument.load(dataBuffer, {
+                    ignoreEncryption: true,
+                    throwOnInvalidObject: false
+                });
+
+                const newDoc = await PDFDocument.create();
+                const pageIndices = originalDoc.getPageIndices();
+                const copiedPages = await newDoc.copyPages(originalDoc, pageIndices);
+
+                copiedPages.forEach((page) => newDoc.addPage(page));
+                const cleanBytes = await newDoc.save();
+                const processingBuffer = Buffer.from(cleanBytes);
+
+                console.log("PDF Repaired. Retrying parse...");
+
+                // Re-define extractText or use the same logic if I could...
+                // I'll just copy the logic for now to be safe and simple within this replacement
+                let pages = [];
+                await pdf(processingBuffer, {
+                    pagerender: (pageData) => {
+                        return pageData.getTextContent().then((textContent) => {
+                            let lastY, text = '';
+                            for (let item of textContent.items) {
+                                if (lastY == item.transform[5] || !lastY) {
+                                    text += item.str;
+                                } else {
+                                    text += '\n' + item.str;
+                                }
+                                lastY = item.transform[5];
+                            }
+                            pages.push(text);
+                            return text;
+                        });
+                    }
+                });
+
+                if (pages.length === 0) {
+                    throw new Error('No text content found even after repair.');
+                }
+
+                return { pages, totalPages: pages.length };
+
+            } catch (repairError) {
+                console.error("Repair failed:", repairError);
+                throw new Error("Failed to parse PDF (Original & Repaired). File might be corrupted or image-only.");
+            }
         }
 
-        return {
-            pages: pages,
-            totalPages: pages.length
-        };
+
     } catch (error) {
         console.error("PDF Parsing Critical Error:", error);
         throw new Error(`Failed to parse PDF: ${error.message}`);

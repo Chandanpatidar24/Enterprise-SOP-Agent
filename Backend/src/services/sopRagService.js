@@ -61,18 +61,22 @@ const buildRoleFilter = (userRole, companyId) => {
         return { companyId: companyId, accessLevel: { $in: [] } };
     }
 
-    // MATCH LOGIC:
-    // 1. Company ID matches user's ID OR is null/missing
-    // 2. AND Access Level is in accessible levels OR is null/missing
-    const companyIds = companyId ? [companyId, null] : [null];
+    // STRICT ISOLATION:
+    // If user has a companyId, they should ONLY see docs from that company.
+    // We removed the permissive fallback to { companyId: null } to prevent data leaks.
 
-    // We construct the query carefully.
-    // Since we need to allow (CompanyID Match OR Null) AND (AccessLevel Match OR Null),
-    // and MongoDB doesn't allow multiple top-level $or operators, we use $and.
+    let companyCondition = {};
 
-    const companyCondition = companyId
-        ? { $or: [{ companyId: companyId }, { companyId: null }, { companyId: { $exists: false } }] }
-        : { $or: [{ companyId: null }, { companyId: { $exists: false } }] };
+    if (companyId) {
+        // Strict match
+        companyCondition = { companyId: companyId };
+    } else {
+        // Fallback for system admins or users without orgs (legacy)
+        // Only show public/unassigned docs
+        companyCondition = {
+            $or: [{ companyId: null }, { companyId: { $exists: false } }]
+        };
+    }
 
     const accessCondition = {
         $or: [
@@ -522,6 +526,7 @@ const processSOPQuery = async ({ query, userRole, companyId, companyName = 'Your
  */
 const getAuthorizedDocuments = async (userRole, companyId) => {
     const roleFilter = buildRoleFilter(userRole, companyId);
+    console.log(`[getAuthorizedDocuments] Filter for ${userRole}:`, JSON.stringify(roleFilter, null, 2));
 
     const documents = await DocumentChunk.aggregate([
         { $match: roleFilter },

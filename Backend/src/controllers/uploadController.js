@@ -11,29 +11,38 @@
 const { parsePDF, chunkText } = require('../utils/textProcessor');
 const { generateEmbedding } = require('../utils/aiService');
 const DocumentChunk = require('../models/DocumentChunk');
+const Organization = require('../models/Organization');
+const { checkDocumentLimit } = require('../utils/limitChecker');
 const fs = require('fs');
 
 // Valid access levels for documents
 const VALID_ACCESS_LEVELS = ['employee', 'manager', 'admin'];
 
 /**
- * POST /api/upload
+ * POST /api/sop/upload
  * 
- * Upload a PDF with access level tagging for role-based retrieval.
- * 
- * Form Data:
- * - file: PDF file (required)
- * - accessLevel: 'employee' | 'manager' | 'admin' (required)
- * - sopName: Human-readable SOP name (optional, defaults to filename)
- * - section: Default section name (optional, defaults to 'General')
+ * Process and index a PDF document with access level control.
+ * Enforces organization-based document limits and parses text into searchable chunks.
  */
 const uploadPDF = async (req, res) => {
     try {
-        // Validate file
         if (!req.file) {
             return res.status(400).json({
                 success: false,
-                message: 'Please upload a PDF file.'
+                message: 'No PDF file provided.'
+            });
+        }
+
+        // Extract optional metadata
+        const sopName = req.body.sopName?.trim() || req.file.originalname.replace('.pdf', '');
+
+        // LIMIT CHECK: Use centralized utility
+        const docLimit = await checkDocumentLimit(req.user.companyId, req.file.originalname);
+        if (!docLimit.allowed) {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            return res.status(403).json({
+                success: false,
+                message: `Document limit reached (${docLimit.limit}). Upgrade your plan to upload more SOPs.`
             });
         }
 
@@ -52,8 +61,6 @@ const uploadPDF = async (req, res) => {
             });
         }
 
-        // Extract optional metadata
-        const sopName = req.body.sopName?.trim() || req.file.originalname.replace('.pdf', '');
         const defaultSection = req.body.section?.trim() || 'General';
 
         const filePath = req.file.path;

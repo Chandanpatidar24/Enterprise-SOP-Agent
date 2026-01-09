@@ -184,17 +184,25 @@ const getDocuments = async (req, res) => {
     try {
         const { userRole } = req.query;
 
-        if (!userRole || !['user', 'employee', 'manager', 'admin'].includes(userRole)) {
+        if (!userRole) {
             return res.status(400).json({
                 success: false,
                 message: 'Valid user role is required as query parameter.'
             });
         }
 
-        console.log(`[getDocuments] Fetching for role: ${userRole}, companyId: ${req.user.companyId} (${typeof req.user.companyId})`);
+        const normalizedRole = userRole.toLowerCase();
+        if (!['user', 'employee', 'manager', 'admin'].includes(normalizedRole)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid user role.'
+            });
+        }
 
-        const documents = await getAuthorizedDocuments(userRole, req.user.companyId);
-        console.log(`[getDocuments] Found ${documents.length} documents`);
+        console.log(`[getDocuments] Request: Role=${normalizedRole}, Company=${req.user.companyId || 'None'} (Type: ${typeof req.user.companyId})`);
+
+        const documents = await getAuthorizedDocuments(normalizedRole, req.user.companyId);
+        console.log(`[getDocuments] Returning ${documents.length} documents for ${normalizedRole}`);
 
         return res.status(200).json({
             success: true,

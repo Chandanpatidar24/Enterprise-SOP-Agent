@@ -1,45 +1,55 @@
 const DocumentChunk = require('../models/DocumentChunk');
 const User = require('../models/User');
 const Organization = require('../models/Organization');
+const { checkUserLimit } = require('../utils/limitChecker');
 
-// List all users in the admin's company
+/**
+ * List all users within the admin's organization.
+ * Filters by companyId and includes legacy accounts if applicable.
+ */
 const listUsers = async (req, res) => {
     try {
-        // Only admins can list users
         if (req.user.role !== 'admin') {
             return res.status(403).json({
                 success: false,
-                message: 'Only administrators can view user list.'
+                message: 'Unauthorized: Admin access required.'
             });
         }
 
-        // Query: Get users with same companyId OR users without companyId (legacy accounts)
         const query = req.user.companyId
-            ? { $or: [{ companyId: req.user.companyId }, { companyId: { $exists: false } }, { companyId: null }] }
-            : {}; // If admin has no companyId, show all users (for testing/legacy)
+            ? {
+                $or: [
+                    { _id: req.user.id },
+                    { companyId: req.user.companyId },
+                    { companyId: { $exists: false } },
+                    { companyId: null }
+                ]
+            }
+            : {};
 
         const users = await User.find(query)
             .select('_id username email role isActive createdAt lastLogin companyId')
             .populate('companyId', 'name type plan')
             .sort({ createdAt: -1 });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             count: users.length,
-            users: users.map(u => ({
-                id: u._id,
-                name: u.username || u.email.split('@')[0],
-                email: u.email,
-                role: u.role,
-                isActive: u.isActive,
-                createdAt: u.createdAt,
-                lastLogin: u.lastLogin,
-                orgType: u.companyId?.type || 'personal',
-                orgName: u.companyId?.name || 'Personal'
+            users: users.map(user => ({
+                id: user._id,
+                name: user.username || user.email.split('@')[0],
+                email: user.email,
+                role: user.role,
+                isActive: user.isActive,
+                createdAt: user.createdAt,
+                lastLogin: user.lastLogin,
+                orgType: user.companyId?.type || 'personal',
+                orgName: user.companyId?.name || 'Personal'
             }))
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('[AdminAPI] listUsers Error:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error while fetching users.' });
     }
 };
 
@@ -111,33 +121,42 @@ const updateUserRole = async (req, res) => {
     }
 };
 
-// Create a new user (Admin only)
+/**
+ * Create a new user within the admin's organization.
+ * Enforces plan-based usage limits and supports optional manual passwords.
+ */
 const createUser = async (req, res) => {
     try {
-        const { name, email, role } = req.body;
+        const { name, email, role, password } = req.body;
 
-        // Only admins can create users
         if (req.user.role !== 'admin') {
             return res.status(403).json({
                 success: false,
-                message: 'Only administrators can create users.'
+                message: 'Unauthorized: Admin access required.'
             });
         }
 
-        // Validate required fields
         if (!email) {
             return res.status(400).json({
                 success: false,
-                message: 'Email is required.'
+                message: 'Email address is required.'
             });
         }
 
-        // Check if user already exists
         const existingUser = await User.findOne({ email: email.toLowerCase() });
         if (existingUser) {
             return res.status(409).json({
                 success: false,
-                message: 'User with this email already exists.'
+                message: 'A user with this email already exists.'
+            });
+        }
+
+        // LIMIT CHECK: Use centralized utility
+        const userLimit = await checkUserLimit(req.user.companyId);
+        if (!userLimit.allowed) {
+            return res.status(403).json({
+                success: false,
+                message: `User limit reached (${userLimit.limit}). Upgrade your plan to add more teammates.`
             });
         }
 
@@ -145,19 +164,27 @@ const createUser = async (req, res) => {
         const validRoles = ['employee', 'manager', 'admin'];
         const finalRole = validRoles.includes(role) ? role : 'employee';
 
-        // Generate a temporary password
-        const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+        // Password logic: Use provided password OR generate temporary one
+        let tempPassword = req.body.password;
+        if (!tempPassword) {
+            tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+        }
+
+        // Generate unique username
+        const baseName = name?.toLowerCase().replace(/\s+/g, '') || email.split('@')[0];
+        const uniqueSuffix = Math.random().toString(36).substring(2, 6);
+        const uniqueUsername = `${baseName}_${uniqueSuffix}`;
 
         // Create the user with admin's companyId
         const user = await User.create({
-            username: name?.toLowerCase().replace(/\s+/g, '') || email.split('@')[0],
+            username: uniqueUsername,
             email: email.toLowerCase(),
             password: tempPassword,
             role: finalRole,
             companyId: req.user.companyId
         });
 
-        console.log(`[Admin] User created: ${user.email} by ${req.user.email}`);
+        console.log(`[Admin] User created: ${user.email} by ${req.user.email} | Temp Password: ${tempPassword}`);
 
         res.status(201).json({
             success: true,
@@ -280,11 +307,19 @@ const deleteUser = async (req, res) => {
 const listDocuments = async (req, res) => {
     try {
         // Match logic:
-        // 1. If admin has companyId: Show company docs + legacy docs (no companyId)
-        // 2. If admin has NO companyId: Show all docs (assuming super admin or legacy mode)
-        const matchQuery = req.user.companyId
-            ? { $or: [{ companyId: req.user.companyId }, { companyId: null }, { companyId: { $exists: false } }] }
-            : {};
+        // STRICT ISOLATION: Only show docs for this specific company.
+        // If admin has NO companyId (legacy super admin), show everything?
+        // Better: If no companyId, show NOTHING for safety, or only docs with no companyId.
+
+        let matchQuery = {};
+
+        if (req.user.companyId) {
+            matchQuery = { companyId: req.user.companyId };
+        } else {
+            // Fallback for admins without companyId (should rare)
+            // Only see legacy docs to avoid leaking company data
+            matchQuery = { companyId: { $exists: false } };
+        }
 
         const documents = await DocumentChunk.aggregate([
             { $match: matchQuery }, // Improved match
@@ -394,12 +429,21 @@ const updateDocument = async (req, res) => {
             });
         }
 
-        // Update all chunks mapping to this file and company
+        // Update all chunks mapping to this file and company (or legacy)
+        const query = {
+            sourceFile: filename
+        };
+
+        if (req.user.companyId) {
+            query.$or = [
+                { companyId: req.user.companyId },
+                { companyId: null },
+                { companyId: { $exists: false } }
+            ];
+        }
+
         const result = await DocumentChunk.updateMany(
-            {
-                sourceFile: filename,
-                companyId: req.user.companyId
-            },
+            query,
             { $set: updateFields }
         );
 

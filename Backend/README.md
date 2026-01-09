@@ -7,13 +7,17 @@ The backbone of the OpsMind RAG system. Handles secure document processing, vect
 ### **Security & Auth**
 - **JWT Authentication**: Full user lifecycle management with encrypted sessions.
 - **RBAC (Role Based Access Control)**: Strict filtering at the database layer to prevent unauthorized information retrieval.
-- **Enterprise Multi-tenancy**: Support for organizational logic and tiered plans.
+- **Enterprise Multi-tenancy**: Support for organizational logic and tiered plans with strict data isolation.
+- **Usage Limiting**: Dynamic enforcement of user and document caps based on organization plan (Free Trial: 3 Users/3 PDFs).
+
 
 ### **RAG Engine (Knowledge Hub)**
 - **Intelligent Chunking**: Splits PDFs into optimized segments for pinpoint accuracy.
 - **Vector Embeddings**: Integrated with Google Gemini `text-embedding-004`.
 - **Streaming API**: High-performance SSE (Server-Sent Events) for real-time AI responses.
 - **Automatic PDF Repair**: Handles malformed documents seamlessly using `pdf-lib`.
+- **Centralized Logic**: Logic-less controllers with dedicated `Config` and `Utility` layers for limits and security.
+
 
 ## 🛠️ Tech Stack
 - **API**: Node.js & Express v5

@@ -3,11 +3,13 @@
 The highly interactive portal for the OpsMind AI Agent. Designed with a focus on visual excellence, security, and real-time performance.
 
 ## 🚀 Key Features
-- **Architecture 2.0**: Completely refactored using specialized custom hooks (`useChat`, `useNavigation`, etc.) for maximum maintainability.
+- **Architecture 3.0**: Refactored for modularity with specialized atomic components (`UserTable`, `SopTable`, `CustomDropdown`) and custom hooks.
 - **Premium Aesthetics**: Interactive cursor spotlight, smooth gradients, and micro-animations for an enterprise-grade experience.
 - **Live AI Streaming**: Real-time token rendering for fluid conversational interactions.
+- **Dynamic Admin Dashboard**: Real-time user management and SOP access control toggles.
 - **Subscription Management**: Internal portal for users to manage their organizational tiers.
 - **Production Guard**: Multi-stage Docker build powered by Nginx for high-scale document serving.
+
 
 ---
 
@@ -36,6 +38,9 @@ npm run dev
 - **Tailwind CSS**: Utility-first styling with modern design tokens.
 - **Hooks-based State**: Clean separation of concerns between UI and logic.
 - **Nginx Config**: Custom `nginx.conf` included for robust routing in production environments.
+
+## 🌐 Live Preview
+Visit the live application: [Enterprise SOP Agent on Render](https://enterprise-sop-agent-frontend.onrender.com/)
 
 ---
 *OpsMind AI – Empowering enterprise knowledge with AI*

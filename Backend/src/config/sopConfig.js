@@ -26,6 +26,25 @@ module.exports = {
     },
 
     // ========================================
+    // PLAN LIMITS
+    // ========================================
+
+    planLimits: {
+        free: {
+            maxUsers: 3,
+            maxDocuments: 3
+        },
+        pro: {
+            maxUsers: 10,
+            maxDocuments: 50
+        },
+        enterprise: {
+            maxUsers: Infinity,
+            maxDocuments: Infinity
+        }
+    },
+
+    // ========================================
     // DOCUMENT ACCESS LEVELS
     // ========================================
 
