@@ -2,6 +2,8 @@
 
 An advanced, AI-powered knowledge management system for enterprise Standard Operating Procedures (SOPs). Transform your static PDFs into an interactive, conversational knowledge base with built-in security and scalability.
 
+Check out our [**Full User Guide**](file:///c:/Users/kartik/Desktop/Enterprise-SOP-Agent/USER_GUIDE.md) to get started!
+
 ## 🚀 Key Features
 
 *   **Premium Interactive UI**: Features a modern, Gemini-inspired dark mode with real-time cursor spotlight effects and high-end animations.
